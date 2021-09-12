@@ -1,0 +1,14 @@
+[flake8]
+max-line-length = 88
+exclude = .git,
+        __pycache__,
+        efficientdet_old, 
+        easy_efficientdet/_third_party/tf_object_detection_api/coco_evaluation.py, 
+        easy_efficientdet/_third_party/tf_object_detection_api/coco_tools.py,
+        easy_efficientdet/_third_party/tf_object_detection_api/json_utils.py,
+        easy_efficientdet/_third_party/tf_object_detection_api/object_detection_evaluation.py,
+        easy_efficientdet/_third_party/tf_object_detection_api/per_image_evaluation.py,
+        easy_efficientdet/_third_party/tf_object_detection_api/standard_fields.py
+        easy_efficientdet/_third_party/tf_object_detection_api/utils/*
+per-file-ignores =
+    __init__.py: F401

@@ -1,0 +1,33 @@
+[tool.yapf]
+based_on_style = 'pep8'
+column_limit = 88
+
+[tool.yapfignore]
+ignore_patterns = ["easy_efficientdet/_third_party/tf_object_detection_api/coco_evaluation.py", 
+                    "easy_efficientdet/_third_party/tf_object_detection_api/coco_tools.py",
+                    "easy_efficientdet/_third_party/tf_object_detection_api/json_utils.py",
+                    "easy_efficientdet/_third_party/tf_object_detection_api/label_map_util.py",
+                    "easy_efficientdet/_third_party/tf_object_detection_api/object_detection_evaluation.py",
+                    "easy_efficientdet/_third_party/tf_object_detection_api/per_image_evaluation.py",
+                    "easy_efficientdet/_third_party/tf_object_detection_api/standard_fields.py",
+                    "easy_efficientdet/_third_party/tf_object_detection_api/utils/*"]
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88
+skip = ["easy_efficientdet/_third_party/coco_evaluation.py", 
+        "easy_efficientdet/_third_party/coco_tools.py",
+        "easy_efficientdet/_third_party/json_utils.py",
+        "easy_efficientdet/_third_party/tf_object_detection_api/label_map_util.py",
+        "easy_efficientdet/_third_party/object_detection_evaluation.py",
+        "easy_efficientdet/_third_party/standard_fields.py",
+        "easy_efficientdet/_third_party/tf_object_detection_api/utils/metrics.py",
+        "easy_efficientdet/_third_party/tf_object_detection_api/utils/np_box_list_ops.py",
+        "easy_efficientdet/_third_party/tf_object_detection_api/utils/np_box_list.py",
+        "easy_efficientdet/_third_party/tf_object_detection_api/utils/np_box_mask_list_ops.py",
+        "easy_efficientdet/_third_party/tf_object_detection_api/utils/np_box_mask_list.py",
+        "easy_efficientdet/_third_party/tf_object_detection_api/utils/np_box_ops.py",
+        "easy_efficientdet/_third_party/tf_object_detection_api/utils/np_mask_ops.py"]
