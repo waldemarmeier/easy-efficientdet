@@ -11,7 +11,7 @@ from .utils import setup_default_logger
 _LAYERS_PATTERN = re.compile("(block[12356][a-z])")
 # _name_getter = attrgetter("name")
 
-logger = setup_default_logger("efficientdet-model")
+logger = setup_default_logger("model")
 
 # params for efficientdet
 # 7x is at index 8

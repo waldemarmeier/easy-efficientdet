@@ -1,3 +1,3 @@
 from . import visualization
-from .efficientdet import EfficientDet
 from .losses import ObjectDetectionLoss
+from .model import EfficientDet
