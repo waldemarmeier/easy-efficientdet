@@ -5,6 +5,8 @@ import pathlib
 import sys
 import xml.etree.ElementTree as ET
 
+from ..utils import key_value_getter
+
 logger = logging.getLogger("create-labelmap")
 logger.setLevel(logging.INFO)
 
@@ -14,7 +16,18 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
-def create_labelmap(data_dir: str, labelmap_file: str):
+def create_labelmap_coco(annotations_path: str, labelmap_file: str):
+
+    with open(annotations_path) as fp:
+        annotations = json.load(fp)
+
+    out_map = list(map(key_value_getter("id", "name"), annotations['categories']))
+
+    with open(labelmap_file, "w") as fs:
+        json.dump(out_map, fs, indent=4)
+
+
+def create_labelmap_voc(data_dir: str, labelmap_file: str):
 
     object_name_set = set()
 
@@ -42,8 +55,9 @@ def main():
         description="Create label map from Pascal/VOC type dataset.")
     parser.add_argument(
         "-i",
-        "--input-dir",
-        help="directory containing containing annotations in XML-files",
+        "--input",
+        help="directory containing containing annotations in XML-files (PASCAL/VOC) or "
+        "path to JSON containing annotations (COCO)",
         type=str,
     )
     parser.add_argument("-o",
@@ -51,9 +65,12 @@ def main():
                         help="output text file containg the labelmap",
                         type=str)
     parser.add_argument("-ow", "--overwrite", action="store_true")
+    parser.add_argument('--type',
+                        choices=['coco', 'voc'],
+                        help='Dataset type, either COCO JSON-File or Pascal/VOC XMLs')
     args = parser.parse_args()
 
-    data_dir = pathlib.Path(args.input_dir)
+    input_path = pathlib.Path(args.input)
     labelmap_file = args.output_file
 
     if (not args.overwrite) and pathlib.Path(labelmap_file).is_file():
@@ -61,7 +78,10 @@ def main():
                     "flag for the file to be overwritten")
         exit()
 
-    create_labelmap(data_dir, labelmap_file)
+    if args.type == 'voc':
+        create_labelmap_voc(input_path, labelmap_file)
+    else:
+        create_labelmap_coco(input_path, labelmap_file)
 
 
 if __name__ == "__main__":

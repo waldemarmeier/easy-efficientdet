@@ -6,6 +6,13 @@ from typing import Sequence, Union
 import tensorflow as tf
 
 
+def key_value_getter(*args):
+    def _key_value_getter(x):
+        return {k: x[k] for k in args}
+
+    return _key_value_getter
+
+
 def setup_default_logger(name: str) -> logging.Logger:
     """Creates default logger which logs to stdout.
 
