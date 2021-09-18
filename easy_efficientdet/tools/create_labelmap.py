@@ -5,7 +5,7 @@ import pathlib
 import sys
 import xml.etree.ElementTree as ET
 
-from ..utils import key_value_getter
+from .dataset_util import key_value_getter
 
 logger = logging.getLogger("create-labelmap")
 logger.setLevel(logging.INFO)
@@ -25,6 +25,8 @@ def create_labelmap_coco(annotations_path: str, labelmap_file: str):
 
     with open(labelmap_file, "w") as fs:
         json.dump(out_map, fs, indent=4)
+
+    logger.info(f"created labelmap file {labelmap_file}")
 
 
 def create_labelmap_voc(data_dir: str, labelmap_file: str):
@@ -48,6 +50,8 @@ def create_labelmap_voc(data_dir: str, labelmap_file: str):
     with open(labelmap_file, "w") as fs:
         json.dump(out_map, fs, indent=4)
 
+    logger.info(f"created labelmap file {labelmap_file}")
+
 
 def main():
 
@@ -65,7 +69,8 @@ def main():
                         help="output text file containg the labelmap",
                         type=str)
     parser.add_argument("-ow", "--overwrite", action="store_true")
-    parser.add_argument('--type',
+    parser.add_argument("-t",
+                        '--type',
                         choices=['coco', 'voc'],
                         help='Dataset type, either COCO JSON-File or Pascal/VOC XMLs')
     args = parser.parse_args()

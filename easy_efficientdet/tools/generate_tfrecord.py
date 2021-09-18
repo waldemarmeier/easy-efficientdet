@@ -11,6 +11,7 @@ from typing import Any, Dict, List
 import tensorflow as tf
 
 from . import dataset_util
+from .create_labelmap import create_labelmap_coco, create_labelmap_voc
 from .dataset_util import (
     add_source,
     decode_image,
@@ -35,6 +36,7 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 DEFAULT_TFRECORD_NAME = "data{shardnum}.tfrecord"
+DEFAULT_LABELMAP_NAME = "labelmap.json"
 _SHARD_SIZE_MB = 100
 
 
@@ -138,10 +140,9 @@ def load_annotations_coco(path: str, label_map):
     # get just the relevant image info and do some preparation
     img_info = map(key_value_getter("id", "file_name", "width", "height", "coco_url"),
                    annotations["images"])
-    img_info = map(
-        rename_keys(
-            (("file_name", "filename"), ("coco_url", "path"), ("id", "image_id"))),
-        img_info)
+    image_info_renamer_fun = rename_keys(
+        (("file_name", "filename"), ("coco_url", "path"), ("id", "image_id")))
+    img_info = map(image_info_renamer_fun, img_info)
     img_info = map(add_source, img_info)
     img_info = {v["image_id"]: v for v in img_info}
 
@@ -179,10 +180,11 @@ def load_annotations_coco(path: str, label_map):
 
 
 def create_tfrecords(
-    input_dir: str,
+    input_img: str,
+    input_anno: str,
     output_dir: str,
     path_labelmap: str,
-    annotation_type: str,
+    dataset_type: str,
     out_file_template: str = None,
     shards: int = 1,
 ) -> None:
@@ -190,16 +192,16 @@ def create_tfrecords(
     if shards < 1:
         raise Exception(f"invalid shard number {shards}")
 
-    if annotation_type not in ("coco", "voc"):
-        raise ValueError(f"annotation should be 'coco' or 'voc', {annotation_type} is"
+    if dataset_type not in ("coco", "voc"):
+        raise ValueError(f"annotation should be 'coco' or 'voc', {dataset_type} is"
                          " not supported")
 
     label_map = read_label_map(path_labelmap)
 
-    if annotation_type == "coco":
-        annotations = load_annotations_coco(input_dir, label_map)
+    if dataset_type == "coco":
+        annotations = load_annotations_coco(input_anno, label_map)
     else:
-        annotations = load_annotations_voc(input_dir)
+        annotations = load_annotations_voc(input_anno)
 
     out_file_template = (DEFAULT_TFRECORD_NAME
                          if out_file_template is None else out_file_template)
@@ -222,7 +224,7 @@ def create_tfrecords(
                 # read image and encode it
                 image_filename = anno["filename"]
                 image_filename_encoded = image_filename.encode("utf-8")
-                image_encoded = tf.io.read_file(os.path.join(input_dir,
+                image_encoded = tf.io.read_file(os.path.join(input_img,
                                                              image_filename)).numpy()
                 image, image_format = decode_image(image_encoded, image_filename)
                 image_format_encoded = image_format.encode("utf-8")
@@ -288,27 +290,36 @@ def main():
         "directory structure of the Pascal/VOC dataset.")
 
     parser.add_argument(
-        "-i",
-        "--input-dir",
-        help="directory containing with image and xml files",
+        "-im",
+        "--input-img",
+        help="directory containg image files",
+        type=str,
+        required=True,
+    )
+    parser.add_argument(
+        "-ia",
+        "--input-anno",
+        help="directory/file (voc/coco) containing object detection annotations - "
+        "XML files (PASCAL/VOC) or JSON file (COCO)",
         type=str,
         required=True,
     )
     parser.add_argument(
         "-o",
         "--output-dir",
-        help="output directory for tfrecords",
+        help="output directory for tfrecords and labelmap",
         type=str,
         required=True,
     )
-    parser.add_argument("-l",
-                        "--label-map",
-                        help="path to label map",
-                        type=str,
-                        required=True)
+    parser.add_argument("-l", "--label-map", help="path to label map", type=str)
+    parser.add_argument("-t",
+                        "--type",
+                        choices=['coco', 'voc'],
+                        help='Dataset type, either COCO JSON-File or Pascal/VOC XMLs')
     parser.add_argument("-f",
                         "--file-template",
-                        help="output directory for tfrecords",
+                        help="template for output tfrecord file names - contains "
+                        "'shardnum' variable, e.g. 'data{shardnum}.tfrecord'",
                         type=str)
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
@@ -328,23 +339,36 @@ def main():
 
     args = parser.parse_args()
 
-    input_dir = args.input_dir
+    input_img = args.input_img
+    input_anno = args.intpu_anno
     output_dir = args.output_dir
     path_labelmap = args.label_map
+    dataset_type = args.type
     out_file_template = (DEFAULT_TFRECORD_NAME
                          if args.file_template is None else args.file_template)
 
     num_shards = 1  # default, put everything into one tf-record
 
     if args.auto_shard:
-        num_shards = get_auto_shard_size(input_dir, _SHARD_SIZE_MB)
+        num_shards = get_auto_shard_size(input_img, _SHARD_SIZE_MB)
     elif args.shards is not None:
         num_shards = args.shards
 
+    # if no path to labelmap is provided, first create one
+    if path_labelmap is None:
+        logger.info("creating labelmap")
+        path_labelmap = os.path.join(output_dir, DEFAULT_LABELMAP_NAME)
+        if dataset_type == "coco":
+            create_labelmap_coco(input_anno, path_labelmap)
+        else:
+            create_labelmap_voc(input_anno, path_labelmap)
+
     create_tfrecords(
-        input_dir=input_dir,
+        input_img=input_img,
+        input_anno=input_anno,
         output_dir=output_dir,
         path_labelmap=path_labelmap,
+        annotation_type=dataset_type,
         out_file_template=out_file_template,
         shards=num_shards,
     )
