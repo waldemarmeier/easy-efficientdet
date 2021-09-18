@@ -18,6 +18,39 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
+def parse_coco_bbox(bboxes):
+    return {
+        "ymin": bboxes[1],
+        "xmin": bboxes[0],
+        "ymax": bboxes[1] + bboxes[3],
+        "xmax": bboxes[0] + bboxes[2]
+    }
+
+
+def add_source(anno):
+    anno["source"] = str(anno["image_id"])
+    return anno
+
+
+def rename_keys(key_mapping, shallow_copy: bool = True):
+    def _rename_keys(x: dict):
+        if shallow_copy:
+            x = x.copy()
+        for old_k, new_k in key_mapping:
+            x[new_k] = x[old_k]
+            x.pop(old_k, None)
+        return x
+
+    return _rename_keys
+
+
+def key_value_getter(*args):
+    def _key_value_getter(x):
+        return {k: x[k] for k in args}
+
+    return _key_value_getter
+
+
 def get_validate_size(image: tf.Tensor, anno: dict, filename: str):
 
     height, width, _ = image.shape

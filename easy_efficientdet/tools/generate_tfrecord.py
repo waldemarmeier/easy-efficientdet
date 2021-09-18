@@ -4,19 +4,25 @@ import logging
 import os
 import sys
 import xml.etree.ElementTree as ET
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List
 
-import dataset_util
 import tensorflow as tf
-from dataset_util import (
+
+from . import dataset_util
+from .dataset_util import (
+    add_source,
     decode_image,
     dict_chunks,
     get_auto_shard_size,
     get_validate_size,
+    key_value_getter,
     label_map_to_dict,
     merge_annotatations,
+    parse_coco_bbox,
     parse_source_tag,
+    rename_keys,
     validate_label_map,
 )
 
@@ -98,7 +104,7 @@ def parse_pascal_xml(path: str) -> Dict[str, Any]:
     return res_anno
 
 
-def load_annotations(data_dir: str) -> dict:
+def load_annotations_voc(data_dir: str) -> dict:
     annotations = {}
 
     for ann_file in Path(data_dir).glob("*.xml"):
@@ -121,10 +127,56 @@ def load_annotations(data_dir: str) -> dict:
     return annotations
 
 
+def load_annotations_coco(path: str, label_map):
+
+    label_map = {v: k for k, v in label_map.items()}
+
+    annotations = None
+    with open(path) as fp:
+        annotations = json.load(fp)
+
+    # get just the relevant image info and do some preparation
+    img_info = map(key_value_getter("id", "file_name", "width", "height", "coco_url"),
+                   annotations["images"])
+    img_info = map(
+        rename_keys(
+            (("file_name", "filename"), ("coco_url", "path"), ("id", "image_id"))),
+        img_info)
+    img_info = map(add_source, img_info)
+    img_info = {v["image_id"]: v for v in img_info}
+
+    # deal with annotations
+    od_annotations = map(key_value_getter("bbox", "category_id", "id", "image_id"),
+                         annotations["annotations"])
+    od_annotations = map(rename_keys((("id", "annotation_id"), )), od_annotations)
+
+    # collect all per image (id)
+    img_id_to_anno = defaultdict(list)
+    for anno in od_annotations:
+        img_id_to_anno[anno["image_id"]].append(anno)
+
+    # add annotation information to image information
+    for k in img_info.keys():
+        agg_annos = []
+
+        for anno in img_id_to_anno[k]:
+            bboxes = parse_coco_bbox(anno["bbox"])
+            bboxes["class"] = label_map[anno["category_id"]]
+            agg_annos.append(bboxes)
+
+        img_id_to_anno[k] = agg_annos
+
+    for img_id in img_info.keys():
+        img_info[img_id]["bboxes"] = img_id_to_anno[img_id]
+
+    return img_info
+
+
 def create_tfrecords(
     input_dir: str,
     output_dir: str,
     path_labelmap: str,
+    annotation_type: str,
     out_file_template: str = None,
     shards: int = 1,
 ) -> None:
@@ -132,9 +184,17 @@ def create_tfrecords(
     if shards < 1:
         raise Exception(f"invalid shard number {shards}")
 
+    if annotation_type not in ("coco", "voc"):
+        raise ValueError(f"annotation should be 'coco' or 'voc', {annotation_type} is"
+                         " not supported")
+
     label_map = read_label_map(path_labelmap)
 
-    annotations = load_annotations(input_dir)
+    if annotation_type == "coco":
+        annotations = load_annotations_coco(input_dir, label_map)
+    else:
+        annotations = load_annotations_voc(input_dir)
+
     out_file_template = (DEFAULT_TFRECORD_NAME
                          if out_file_template is None else out_file_template)
 
