@@ -155,6 +155,12 @@ def load_annotations_coco(path: str, label_map):
     for anno in od_annotations:
         img_id_to_anno[anno["image_id"]].append(anno)
 
+    if len(img_info) > len(img_id_to_anno):
+        logger.warning("Dataset contains images with")
+    elif len(img_info) < len(img_id_to_anno):
+        logger.warning("Dataset contains annotations without correspoding image "
+                       "information")
+
     # add annotation information to image information
     for k in img_info.keys():
         agg_annos = []
