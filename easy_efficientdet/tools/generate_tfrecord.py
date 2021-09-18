@@ -157,7 +157,7 @@ def load_annotations_coco(path: str, label_map):
         img_id_to_anno[anno["image_id"]].append(anno)
 
     if len(img_info) > len(img_id_to_anno):
-        logger.warning("Dataset contains images with")
+        logger.warning("Dataset contains images without any annotations")
     elif len(img_info) < len(img_id_to_anno):
         logger.warning("Dataset contains annotations without correspoding image "
                        "information")
@@ -340,7 +340,7 @@ def main():
     args = parser.parse_args()
 
     input_img = args.input_img
-    input_anno = args.intpu_anno
+    input_anno = args.input_anno
     output_dir = args.output_dir
     path_labelmap = args.label_map
     dataset_type = args.type
@@ -368,7 +368,7 @@ def main():
         input_anno=input_anno,
         output_dir=output_dir,
         path_labelmap=path_labelmap,
-        annotation_type=dataset_type,
+        dataset_type=dataset_type,
         out_file_template=out_file_template,
         shards=num_shards,
     )
