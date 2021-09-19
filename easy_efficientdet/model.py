@@ -34,9 +34,9 @@ def EfficientDet(
     version: int = 0,
     num_cls: int = 4,
     num_anchors: int = 9,
-    image_size: Optional[Union[Tuple, int]] = None,
+    image_shape: Optional[Union[Tuple, int]] = None,
 ):
-    image_shape = _get_image_size(image_size, version)
+    image_shape = _get_image_size(image_shape, version)
     backbone_num = BACKBONE_NUM[version]
     num_w_bifpn = NUM_W_BiFPN[version]
     num_head_layers = NUM_HEAD_LAYERS[version]
