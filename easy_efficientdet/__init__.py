@@ -1,6 +1,6 @@
-from . import visualization
-from .config import DefaultConfig
-from .data.preprocessing import init_data
-from .losses import ObjectDetectionLoss
-from .model import EfficientDet
-from .training import CosineLrSchedule
+import easy_efficientdet.visualization
+from easy_efficientdet.config import DefaultConfig
+from easy_efficientdet.data.preprocessing import init_data
+from easy_efficientdet.losses import ObjectDetectionLoss
+from easy_efficientdet.model import EfficientDet
+from easy_efficientdet.training import CosineLrSchedule

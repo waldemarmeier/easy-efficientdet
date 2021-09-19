@@ -10,7 +10,7 @@ import tensorflow as tf
 from tensorflow.image import ResizeMethod
 from tensorflow.keras.losses import Reduction
 
-from .utils import setup_default_logger
+from easy_efficientdet.utils import setup_default_logger
 
 logger = setup_default_logger("Config")
 

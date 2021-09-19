@@ -19,10 +19,11 @@ Example box operations that are supported:
 """
 from __future__ import absolute_import, division, print_function
 
+import np_box_list_ops
+import np_box_mask_list
+import np_mask_ops
 import numpy as np
 from six.moves import range
-
-from . import np_box_list_ops, np_box_mask_list, np_mask_ops
 
 
 def iou(box_mask_list1, box_mask_list2):

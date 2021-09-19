@@ -48,11 +48,10 @@ except ModuleNotFoundError:
                     "https://github.com/cocodataset/cocoapi"
                     "pip install pycoco")
 
+import json_utils
 import six
 import tensorflow.compat.v1 as tf
 from six.moves import range, zip
-
-from . import json_utils
 
 
 class COCOWrapper(coco.COCO):

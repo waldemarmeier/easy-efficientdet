@@ -16,7 +16,7 @@ import math
 
 import tensorflow as tf
 
-from ..utils import setup_default_logger
+from easy_efficientdet.utils import setup_default_logger
 
 _EFFICIENTDET_BATCH_SIZE = 128
 _EFFICIENTDET_BASE_LEARNIN_RATE = .16

@@ -3,8 +3,13 @@ from typing import Callable, Optional, Sequence, Tuple, Union
 
 import tensorflow as tf
 
-from .anchors import generate_anchor_boxes
-from .utils import compute_iou, convert_to_centroids, get_abs_bboxes, swap_xy
+from easy_efficientdet.anchors import generate_anchor_boxes
+from easy_efficientdet.utils import (
+    compute_iou,
+    convert_to_centroids,
+    get_abs_bboxes,
+    swap_xy,
+)
 
 EPSILON = 1e-8
 

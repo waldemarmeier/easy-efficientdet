@@ -3,7 +3,12 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from matplotlib.patches import Rectangle
 
-from .utils import convert_to_corners, get_abs_bboxes, setup_default_logger, swap_xy
+from easy_efficientdet.utils import (
+    convert_to_corners,
+    get_abs_bboxes,
+    setup_default_logger,
+    swap_xy,
+)
 
 logger = setup_default_logger("visualization")
 

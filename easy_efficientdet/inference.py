@@ -3,9 +3,9 @@ from functools import partial
 
 import tensorflow as tf
 
-from ._third_party import DecodePredictions  # noqa F401
-from .boxencoding import generate_anchor_boxes
-from .utils import convert_to_corners
+from easy_efficientdet._third_party import DecodePredictions  # noqa F401
+from easy_efficientdet.boxencoding import generate_anchor_boxes
+from easy_efficientdet.utils import convert_to_corners
 
 
 @dataclass

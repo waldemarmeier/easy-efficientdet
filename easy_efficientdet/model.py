@@ -4,8 +4,8 @@ from typing import Optional, Sequence, Tuple, Union
 
 import tensorflow as tf
 
-from .layers import BiFPN, BoxPredLayer, ClassPredLayer, PreBiFPN
-from .utils import setup_default_logger
+from easy_efficientdet.layers import BiFPN, BoxPredLayer, ClassPredLayer, PreBiFPN
+from easy_efficientdet.utils import setup_default_logger
 
 # honestly, should rename this file to 'model.py'
 _LAYERS_PATTERN = re.compile("(block[12356][a-z])")

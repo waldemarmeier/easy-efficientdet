@@ -5,7 +5,7 @@ import pathlib
 import sys
 import xml.etree.ElementTree as ET
 
-from .dataset_util import key_value_getter
+from easy_efficientdet.tools.dataset_util import key_value_getter
 
 logger = logging.getLogger("create-labelmap")
 logger.setLevel(logging.INFO)

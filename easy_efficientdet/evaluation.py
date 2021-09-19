@@ -8,11 +8,12 @@ import numpy as np
 import tensorflow as tf
 
 # isort: off
-from ._third_party.tf_object_detection_api.coco_evaluation import CocoDetectionEvaluator
-from ._third_party.tf_object_detection_api.object_detection_evaluation import (
-    PascalDetectionEvaluator, )
-from .data.preprocessing import parse_od_record
-from .utils import get_abs_bboxes, setup_default_logger, swap_xy
+from easy_efficientdet._third_party.tf_object_detection_api.coco_evaluation \
+    import CocoDetectionEvaluator
+from easy_efficientdet._third_party.tf_object_detection_api.object_detection_evaluation\
+    import PascalDetectionEvaluator
+from easy_efficientdet.data.preprocessing import parse_od_record
+from easy_efficientdet.utils import get_abs_bboxes, setup_default_logger, swap_xy
 # isort: on
 
 logger = setup_default_logger("evaluation")

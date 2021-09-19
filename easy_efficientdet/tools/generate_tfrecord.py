@@ -10,9 +10,12 @@ from typing import Any, Dict, List
 
 import tensorflow as tf
 
-from . import dataset_util
-from .create_labelmap import create_labelmap_coco, create_labelmap_voc
-from .dataset_util import (
+from easy_efficientdet.tools import dataset_util
+from easy_efficientdet.tools.create_labelmap import (
+    create_labelmap_coco,
+    create_labelmap_voc,
+)
+from easy_efficientdet.tools.dataset_util import (
     add_source,
     decode_image,
     dict_chunks,

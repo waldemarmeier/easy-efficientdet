@@ -16,9 +16,8 @@
 
 from __future__ import absolute_import, division, print_function
 
+import np_box_list
 import numpy as np
-
-from . import np_box_list
 
 
 class BoxMaskList(np_box_list.BoxList):

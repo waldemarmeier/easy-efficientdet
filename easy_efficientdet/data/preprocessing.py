@@ -3,10 +3,10 @@ from typing import Any, Dict, Sequence, Union
 
 import tensorflow as tf
 
-from ..boxencoding import BoxEncoder
-from ..config import ObjectDetectionConfig
-from ..utils import get_tfds_size, setup_default_logger
-from .augmentation import augment_data_builder
+from easy_efficientdet.boxencoding import BoxEncoder
+from easy_efficientdet.config import ObjectDetectionConfig
+from easy_efficientdet.data.augmentation import augment_data_builder
+from easy_efficientdet.utils import get_tfds_size, setup_default_logger
 
 # set up logging
 logger = setup_default_logger("preprocessing")

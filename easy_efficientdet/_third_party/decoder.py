@@ -11,8 +11,8 @@ from typing import Optional, Sequence
 import tensorflow as tf
 from tensorflow import keras
 
-from ..anchors import generate_anchor_boxes
-from ..utils import convert_to_corners
+from easy_efficientdet.anchors import generate_anchor_boxes
+from easy_efficientdet.utils import convert_to_corners
 
 
 class DecodePredictions(keras.layers.Layer):
