@@ -67,12 +67,12 @@ class ObjectDetectionConfig:
         else:
             intermediate_scales = self.intermediate_scales
 
-        return intermediate_scales * len(self.num_anchors)
+        return intermediate_scales * len(self.aspect_ratios)
 
     def get_model_config(self) -> Dict[str, Any]:
         "return just the params needed to set up the model"
         return {
-            "output_size": deepcopy(self.image_shape),
+            "image_shape": deepcopy(self.image_shape),
             "version": self.efficientdet_version,
             "num_cls": self.num_cls,
             "num_anchors": self.num_anchors,
