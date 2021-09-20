@@ -37,8 +37,12 @@ import six
 import tensorflow.compat.v1 as tf
 from six.moves import range, zip
 
-from . import label_map_util, per_image_evaluation, standard_fields
-from .utils import metrics
+from easy_efficientdet._third_party.tf_object_detection_api import (
+    label_map_util,
+    per_image_evaluation,
+    standard_fields,
+)
+from easy_efficientdet._third_party.tf_object_detection_api.utils import metrics
 
 
 class DetectionEvaluator(six.with_metaclass(ABCMeta, object)):

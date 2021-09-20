@@ -24,7 +24,12 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 from six.moves import range
 
-from .utils import np_box_list, np_box_list_ops, np_box_mask_list, np_box_mask_list_ops
+from easy_efficientdet._third_party.tf_object_detection_api.utils import (
+    np_box_list,
+    np_box_list_ops,
+    np_box_mask_list,
+    np_box_mask_list_ops,
+)
 
 
 class PerImageEvaluation(object):

@@ -20,7 +20,12 @@ import tensorflow.compat.v1 as tf
 from six.moves import zip
 
 # from object_detection.utils import np_mask_ops
-from . import coco_tools, json_utils, object_detection_evaluation, standard_fields
+from easy_efficientdet._third_party.tf_object_detection_api import (
+    coco_tools,
+    json_utils,
+    object_detection_evaluation,
+    standard_fields,
+)
 
 
 class CocoDetectionEvaluator(object_detection_evaluation.DetectionEvaluator):
