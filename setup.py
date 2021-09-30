@@ -20,7 +20,7 @@ setup(
     author_email="info@waldemarmeier.com",
     url="https://github.com/waldemarmeier/easy-efficientdet",
     keywords="object-detection neural-network efficientdet",
-    packages=find_packages(exclude=["easy_efficientdet._third_party*"]),
+    packages=find_packages(),
     license='Apache 2.0',
     python_requires='>=3.7',
     install_requires=requirements["default"],
