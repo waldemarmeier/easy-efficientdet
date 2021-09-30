@@ -33,7 +33,7 @@ class DecodePredictionsSoft(tf.keras.layers.Layer):
     """
     def __init__(self,
                  num_classes=4,
-                 image_shape=(640, 640),
+                 image_shape=(512, 512),
                  confidence_threshold=0.05,
                  nms_iou_threshold=0.5,
                  max_detections_per_class=100,

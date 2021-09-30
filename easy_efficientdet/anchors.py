@@ -57,7 +57,7 @@ def _infer_intermediate_scales(
 
 
 def generate_anchor_boxes(
-    image_shape: Sequence[Number] = (640, 640),
+    image_shape: Sequence[Number] = (512, 512),
     intermediate_scales: Union[Sequence[Number], int] = 3,
     aspect_ratios: Sequence[Number] = [0.5, 1.0, 2.0],
     stride_anchor_size_ratio: Number = 4.0,
@@ -73,7 +73,7 @@ def generate_anchor_boxes(
 
     Args:
         image_shape (Sequence[Number], optional): Shape of the input image. Defaults to
-             (640, 640).
+             (512, 512).
         intermediate_scales (Union[Sequence[Number], int], optional): [description].
              Defaults to 3.
         aspect_ratios (Sequence[Number], optional): [description]. Defaults to

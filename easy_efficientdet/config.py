@@ -152,11 +152,11 @@ class ObjectDetectionConfig:
                         timestamp=datetime.now().strftime('%Y%m%d%H%M'))
 
 
-def DefaultConfig(training_image_size: int,
-                  num_cls: int,
+def DefaultConfig(num_cls: int,
                   batch_size: int,
                   train_data_path: str,
                   val_data_path: str,
+                  training_image_size: int = 512,
                   efficientdet_version: int = 0,
                   bw_image_data: bool = False,
                   **kwargs) -> ObjectDetectionConfig:

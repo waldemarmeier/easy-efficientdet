@@ -17,7 +17,7 @@ EPSILON = 1e-8
 class BoxEncoder:
     def __init__(
         self,
-        image_shape: Sequence[Number] = (640, 640),
+        image_shape: Sequence[Number] = (512, 512),
         intermediate_scales: Union[Sequence[Number], int] = 3,
         aspect_ratios: Sequence[Number] = [0.5, 1.0, 2.0],
         stride_anchor_size_ratio: Number = 4.0,

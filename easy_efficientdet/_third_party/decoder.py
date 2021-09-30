@@ -33,7 +33,7 @@ class DecodePredictions(keras.layers.Layer):
     def __init__(
             self,
             num_classes: int = 4,
-            image_shape: Sequence[Number] = (640, 640),
+            image_shape: Sequence[Number] = (512, 512),
             confidence_threshold: float = 0.05,
             nms_iou_threshold: float = 0.5,
             max_detections_per_class: int = 100,
