@@ -10,6 +10,15 @@ from tensorflow.keras.layers import (
     SeparableConv2D,
     UpSampling2D,
 )
+from tensorflow.keras.layers.experimental import SyncBatchNormalization
+
+
+def batchnorm_builder(sync_bn: bool, **kwargs):
+
+    if sync_bn:
+        return SyncBatchNormalization(**kwargs)
+    else:
+        return BatchNormalization(**kwargs)
 
 
 class WeightedFusion(keras.layers.Layer):
@@ -56,6 +65,7 @@ class ChangeDim(keras.layers.Layer):
         self,
         num_w_bifpn: int,
         name: str = "change_dim",
+        bn_sync: bool = False,
         bn_momentum: float = 0.99,
         bn_epsilon: float = 1e-3,
     ):
@@ -65,6 +75,7 @@ class ChangeDim(keras.layers.Layer):
         # BN params
         self.bn_momentum = bn_momentum
         self.bn_epsilon = bn_epsilon
+        self.bn_sync = bn_sync
 
         # layers
         self.chdim_1x1_conv = Conv2D(
@@ -74,7 +85,8 @@ class ChangeDim(keras.layers.Layer):
             padding="same",
             name="chdim_1x1_conv",
         )
-        self.chdim_bn = BatchNormalization(
+        self.chdim_bn = batchnorm_builder(
+            sync_bn=bn_sync,
             momentum=bn_momentum,
             epsilon=bn_epsilon,
         )
@@ -106,6 +118,7 @@ class PreBiFPN(keras.layers.Layer):
         self,
         num_w_bifpn,
         name="pre_bifpn",
+        bn_sync: bool = False,
         bn_momentum=0.99,
         bn_epsilon=1e-3,
     ):
@@ -114,6 +127,7 @@ class PreBiFPN(keras.layers.Layer):
         # BN params
         self.bn_momentum = bn_momentum
         self.bn_epsilon = bn_epsilon
+        self.bn_sync = bn_sync
 
         self.maxpool_P6out = MaxPool2D(
             pool_size=(3, 3),
@@ -161,6 +175,7 @@ class PreBiFPN(keras.layers.Layer):
         return ChangeDim(
             num_w_bifpn=self.num_w_bifpn,
             name=name,
+            bn_sync=self.bn_sync,
             bn_momentum=self.bn_momentum,
             bn_epsilon=self.bn_epsilon,
         )
@@ -180,7 +195,8 @@ class SeparableConvBlock(keras.layers.Layer):
         kernel_size=(3, 3),
         strides=(1, 1),
         padding="same",
-        use_bias=True,
+        use_bias: bool = True,
+        bn_sync: bool = False,
         bn_momentum=0.99,
         bn_epsilon=1e-3,
         name: str = None,
@@ -197,6 +213,7 @@ class SeparableConvBlock(keras.layers.Layer):
         # BN params
         self.bn_momentum = bn_momentum
         self.bn_epsilon = bn_epsilon
+        self.bn_sync = bn_sync
 
         # layers
         # add naming convention with tf.name_scope...
@@ -209,7 +226,8 @@ class SeparableConvBlock(keras.layers.Layer):
             use_bias=use_bias,
             **conv_kwargs,
         )
-        self.bn = BatchNormalization(
+        self.bn = batchnorm_builder(
+            bn_sync=bn_sync,
             momentum=bn_momentum,
             epsilon=bn_epsilon,
             name="sep_conv_bn",
@@ -249,6 +267,7 @@ class BiFPN(keras.layers.Layer):
         self,
         num_bifpn_layers,
         num_w_bifpn,
+        bn_sync: bool = False,
         bn_momentum=0.99,
         bn_epsilon=1e-3,
         name=None,
@@ -260,6 +279,7 @@ class BiFPN(keras.layers.Layer):
         # BN params
         self.bn_momentum = bn_momentum
         self.bn_epsilon = bn_epsilon
+        self.bn_sync = bn_sync
 
         # @todo add property getter  _bifpn_layers
         # idk if this a good practice
@@ -267,6 +287,7 @@ class BiFPN(keras.layers.Layer):
             bifpn_layer = BiFPNLayer(
                 bifpn_layer_num=i,
                 num_w_bifpn=self.num_w_bifpn,
+                bn_sync=bn_sync,
                 bn_momentum=self.bn_momentum,
                 bn_epsilon=self.bn_epsilon,
             )
@@ -317,6 +338,7 @@ class BiFPNLayer(keras.layers.Layer):
                  bifpn_layer_num: int,
                  num_w_bifpn: int,
                  name: str = None,
+                 bn_sync: bool = False,
                  bn_momentum: float = 0.99,
                  bn_epsilon: float = 1e-3,
                  mp_pool_size: int = 3,
@@ -326,6 +348,7 @@ class BiFPNLayer(keras.layers.Layer):
         self.bifpn_layer_num = bifpn_layer_num
         self.num_w_bifpn = num_w_bifpn
         # BN params
+        self.bn_sync = bn_sync
         self.bn_momentum = bn_momentum
         self.bn_epsilon = bn_epsilon
         # max pool params
@@ -394,6 +417,7 @@ class BiFPNLayer(keras.layers.Layer):
         return SeparableConvBlock(
             filters=self.num_w_bifpn,
             name=name,
+            bn_sync=self.bn_sync,
             bn_momentum=self.bn_momentum,
             bn_epsilon=self.bn_epsilon,
             conv_kwargs=self._default_depthw_conv_init(),
@@ -482,6 +506,7 @@ class BiFPNLayer(keras.layers.Layer):
         }
 
 
+# TODO rename this and inheriting layers to HeadLayer, ClassHead ...
 class PredLayer(keras.layers.Layer):
 
     CONV_PREFIX = "conv_layer"
@@ -495,6 +520,7 @@ class PredLayer(keras.layers.Layer):
         kernel_size: Sequence[int] = (3, 3),
         strides: Sequence[int] = (1, 1),
         padding: str = "same",
+        bn_sync: bool = False,
         bn_momentum: float = 0.99,
         bn_epsilon: float = 1e-3,
     ):
@@ -505,6 +531,7 @@ class PredLayer(keras.layers.Layer):
         # BN params
         self.bn_momentum = bn_momentum
         self.bn_epsilon = bn_epsilon
+        self.bn_sync = bn_sync
         # conv params
         self.kernel_size = kernel_size
         self.strides = strides
@@ -533,7 +560,8 @@ class PredLayer(keras.layers.Layer):
         # is this really necessary?
         for i in range(depth):
             for j in range(3, 8):  # from 3,..,7 for every level in FPN ouput
-                bn = BatchNormalization(
+                bn = batchnorm_builder(
+                    bn_sync=bn_sync,
                     momentum=bn_momentum,
                     epsilon=bn_epsilon,
                     name=f"bn_{self.name}_num{i}_level{j}",
@@ -565,6 +593,7 @@ class BoxPredLayer(PredLayer):
         kernel_size=(3, 3),
         strides=(1, 1),
         padding="same",
+        bn_sync: bool = False,
         bn_momentum=0.99,
         bn_epsilon=1e-3,
         name="box_predict",
@@ -577,6 +606,7 @@ class BoxPredLayer(PredLayer):
             kernel_size=kernel_size,
             strides=strides,
             padding=padding,
+            bn_sync=bn_sync,
             bn_momentum=bn_momentum,
             bn_epsilon=bn_epsilon,
         )
@@ -642,6 +672,7 @@ class ClassPredLayer(PredLayer):
         kernel_size: Sequence[int] = (3, 3),
         strides: Sequence[int] = (1, 1),
         padding: str = "same",
+        bn_sync: bool = False,
         bn_momentum: float = 0.99,
         bn_epsilon: float = 1e-3,
         name: str = "box_pred",
@@ -654,6 +685,7 @@ class ClassPredLayer(PredLayer):
             kernel_size=kernel_size,
             strides=strides,
             padding=padding,
+            bn_sync=bn_sync,
             bn_momentum=bn_momentum,
             bn_epsilon=bn_epsilon,
         )
@@ -663,6 +695,7 @@ class ClassPredLayer(PredLayer):
         # BN params
         self.bn_momentum = bn_momentum
         self.bn_epsilon = bn_epsilon
+        self.bn_sync = bn_sync
 
         self.head = SeparableConv2D(
             filters=num_anchors * num_cls,

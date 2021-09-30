@@ -4,6 +4,7 @@ from typing import Optional, Sequence, Tuple, Union
 
 import tensorflow as tf
 
+from easy_efficientdet._third_party import efficientnet as sync_bn_effnet_factory
 from easy_efficientdet.layers import BiFPN, BoxPredLayer, ClassPredLayer, PreBiFPN
 from easy_efficientdet.utils import setup_default_logger
 
@@ -30,12 +31,11 @@ BN_MOMENTUM = 0.99
 BN_EPSILON = 0.001
 
 
-def EfficientDet(
-    version: int = 0,
-    num_cls: int = 4,
-    num_anchors: int = 9,
-    image_shape: Optional[Union[Tuple, int]] = None,
-):
+def EfficientDet(version: int = 0,
+                 num_cls: int = 4,
+                 num_anchors: int = 9,
+                 image_shape: Optional[Union[Tuple, int]] = None,
+                 bn_sync: bool = False):
     image_shape = _get_image_size(image_shape, version)
     backbone_num = BACKBONE_NUM[version]
     num_w_bifpn = NUM_W_BiFPN[version]
@@ -47,6 +47,7 @@ def EfficientDet(
                              num_anchors=num_anchors,
                              image_shape=image_shape,
                              backbone_num=backbone_num,
+                             bn_sync=bn_sync,
                              bn_momentum=BN_MOMENTUM,
                              bn_epsilon=BN_EPSILON,
                              num_w_bifpn=num_w_bifpn,
@@ -57,15 +58,12 @@ def EfficientDet(
 
 
 def effdet_functional(version: int, num_cls: int, num_anchors: int,
-                      image_shape: Sequence[int], backbone_num: int, bn_momentum: float,
-                      bn_epsilon: float, num_w_bifpn: int, num_bifpn_layers: int,
-                      num_head_layers: int, fast_fusion_epsilon: float,
-                      weighted_fusion_type: float):
+                      image_shape: Sequence[int], backbone_num: int, bn_sync: bool,
+                      bn_momentum: float, bn_epsilon: float, num_w_bifpn: int,
+                      num_bifpn_layers: int, num_head_layers: int,
+                      fast_fusion_epsilon: float, weighted_fusion_type: float):
 
-    efficientnet = _create_backbone(
-        backbone_num,
-        image_shape,
-    )
+    efficientnet = _create_backbone(backbone_num, image_shape, bn_sync)
     fpn_input_layers = _extract_layers(efficientnet)
     # just take the last 3
     fpn_input_layers = fpn_input_layers[2:]
@@ -76,12 +74,14 @@ def effdet_functional(version: int, num_cls: int, num_anchors: int,
 
     pre_bifpn = PreBiFPN(
         num_w_bifpn,
+        bn_sync=bn_sync,
         bn_momentum=bn_momentum,
         bn_epsilon=bn_epsilon,
     )
     bifpn = BiFPN(
         num_bifpn_layers=num_bifpn_layers,
         num_w_bifpn=num_w_bifpn,
+        bn_sync=bn_sync,
         bn_momentum=bn_momentum,
         bn_epsilon=bn_epsilon,
     )
@@ -89,6 +89,7 @@ def effdet_functional(version: int, num_cls: int, num_anchors: int,
     box_pred = BoxPredLayer(
         width=num_w_bifpn,
         depth=num_head_layers,
+        bn_sync=bn_sync,
         bn_momentum=bn_momentum,
         bn_epsilon=bn_epsilon,
         num_anchors=num_anchors,
@@ -97,6 +98,7 @@ def effdet_functional(version: int, num_cls: int, num_anchors: int,
     cls_pred = ClassPredLayer(
         width=num_w_bifpn,
         depth=num_head_layers,
+        bn_sync=bn_sync,
         bn_momentum=bn_momentum,
         bn_epsilon=bn_epsilon,
         num_anchors=num_anchors,
@@ -123,8 +125,13 @@ def effdet_functional(version: int, num_cls: int, num_anchors: int,
     return effdet_model
 
 
-def _create_backbone(backbone_num, input_shape):
-    backbone_builder = getattr(tf.keras.applications, f"EfficientNetB{backbone_num}")
+def _create_backbone(backbone_num, input_shape, bn_sync):
+    if bn_sync:
+        backbone_builder = getattr(sync_bn_effnet_factory,
+                                   f"EfficientNetB{backbone_num}")
+    else:
+        backbone_builder = getattr(tf.keras.applications,
+                                   f"EfficientNetB{backbone_num}")
     backbone = backbone_builder(input_shape=input_shape, include_top=False)
     logger.info(f"using backbone: {backbone.name}")
     return backbone
@@ -152,7 +159,7 @@ def _get_image_size(
     image_size: Union[Sequence[Number], int],
     efficientdet_version: int,
 ) -> Sequence[int]:
-
+    # check size is devidable by 32
     if image_size is None:
         return (
             IMAGE_RESOLUTION[efficientdet_version],
