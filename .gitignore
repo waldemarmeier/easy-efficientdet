@@ -3,6 +3,8 @@ models/*
 data/*
 *.zip
 _NOTES.md
+*.ipynb
+!*/*.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
