@@ -19,73 +19,6 @@ from easy_efficientdet.utils import get_abs_bboxes, setup_default_logger, swap_x
 logger = setup_default_logger("evaluation")
 
 
-def evaluate_od_legacy(dataset: tf.data.Dataset,
-                       prediction_model: tf.keras.Model,
-                       image_shape: Tuple[int],
-                       categories: List[Dict],
-                       include_metrics_per_category: bool = False,
-                       all_metrics_per_category: bool = False,
-                       is_data_parsed: bool = False,
-                       remove_sm_bbox_value: float = 0,
-                       subtract_one_from_cls: bool = True):
-
-    # prepare data
-    if not is_data_parsed:
-        dataset = dataset.map(parse_od_record)
-
-    # parse data for coco evaluation
-    dataset = dataset.map(partial(parse_data_cocoeval, image_shape=image_shape))
-
-    if remove_sm_bbox_value:
-        dataset = dataset.map(
-            partial(remove_small_gt, bbox_threshold=remove_sm_bbox_value))
-
-    # create evaluator object
-    evaluator = CocoDetectionEvaluator(
-        categories=categories,
-        include_metrics_per_category=include_metrics_per_category,
-        all_metrics_per_category=all_metrics_per_category)
-
-    # iterator though dataset to get groundtruth and respective predictions
-    for sample in dataset:
-        image_id = sample["image_id"].numpy()
-        image_id = image_id.decode()
-
-        logger.debug("evaluating image with id: {}".format(image_id))
-
-        image = sample["image"]
-        target_bboxes = sample["bboxes"]
-        target_cls = sample["bbox_cls"].numpy()
-
-        # add ground truth to evaluator
-        target_bboxes = swap_xy(target_bboxes).numpy()
-
-        # todo: remove too small bboxes
-
-        gt = GroundTruth(groundtruth_boxes=target_bboxes,
-                         groundtruth_classes=target_cls)
-        if subtract_one_from_cls:
-            gt = gt.subtract_one_from_cls()
-        gt_dict = dataclasses.asdict(gt)
-        # print('gt', gt_dict)
-        evaluator.add_single_ground_truth_image_info(image_id=image_id,
-                                                     groundtruth_dict=gt_dict)
-
-        # inference, add results ass detections to evaluator
-        prediction = prediction_model(tf.expand_dims(image, axis=0))
-        parsed_prediction = parse_combined_nms_obj(prediction)
-
-        # swap x,y
-        # parsed_prediction.swap_box_xy()
-        prediction_dict = dataclasses.asdict(parsed_prediction)
-        # print("pred", prediction_dict)
-        evaluator.add_single_detected_image_info(image_id=image_id,
-                                                 detections_dict=prediction_dict)
-
-    eval_results = evaluator.evaluate()
-    return eval_results
-
-
 def evaluate_od(dataset: tf.data.Dataset,
                 prediction_model: tf.keras.Model,
                 image_shape: Tuple[int],
@@ -209,12 +142,6 @@ def evaluate_od_pascal(dataset: tf.data.Dataset,
                                          matching_iou_threshold=0.5,
                                          nms_iou_threshold=1.0,
                                          nms_max_output_boxes=100)
-    # evaluator = CocoDetectionEvaluator(
-    #     categories=categories,
-    #     include_metrics_per_category=include_metrics_per_category,
-    #     all_metrics_per_category=all_metrics_per_category)
-
-    # iterator though dataset to get groundtruth and respective predictions
 
     batched_data = dataset.padded_batch(batch_size,
                                         drop_remainder=False,
@@ -246,11 +173,8 @@ def evaluate_od_pascal(dataset: tf.data.Dataset,
             gt = GroundTruth(groundtruth_boxes=target_bboxes,
                              groundtruth_classes=target_cls)
 
-            # if subtract_one_from_cls:
-            #     gt = gt.subtract_one_from_cls()
-
             gt_dict = dataclasses.asdict(gt)
-            # print('gt', gt_dict)
+
             image_id = image_ids[i]
             evaluator.add_single_ground_truth_image_info(image_id=image_id,
                                                          groundtruth_dict=gt_dict)
