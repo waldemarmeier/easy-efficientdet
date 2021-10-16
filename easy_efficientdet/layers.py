@@ -227,7 +227,7 @@ class SeparableConvBlock(keras.layers.Layer):
             **conv_kwargs,
         )
         self.bn = batchnorm_builder(
-            bn_sync=bn_sync,
+            sync_bn=bn_sync,
             momentum=bn_momentum,
             epsilon=bn_epsilon,
             name="sep_conv_bn",
@@ -561,7 +561,7 @@ class PredLayer(keras.layers.Layer):
         for i in range(depth):
             for j in range(3, 8):  # from 3,..,7 for every level in FPN ouput
                 bn = batchnorm_builder(
-                    bn_sync=bn_sync,
+                    sync_bn=bn_sync,
                     momentum=bn_momentum,
                     epsilon=bn_epsilon,
                     name=f"bn_{self.name}_num{i}_level{j}",

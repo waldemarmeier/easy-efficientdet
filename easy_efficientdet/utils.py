@@ -164,7 +164,7 @@ def get_tfds_size(tfds: tf.data.Dataset) -> int:
     def _add_one(x, _):
         return x + 1
 
-    return tfds.reduce(0, _add_one).numpy()
+    return tfds.reduce(tf.constant(0), _add_one).numpy()
 
 
 def infer_image_shape(image_size: Union[Sequence[Number], Number]) -> Sequence[Number]:
@@ -177,3 +177,21 @@ def infer_image_shape(image_size: Union[Sequence[Number], Number]) -> Sequence[N
                 f"Image shape must be a sequence of length 2 not: {image_size}")
     else:
         return (image_size, image_size)
+
+
+def convert_image_to_rgb(images: tf.Tensor) -> tf.Tensor:
+    """Converts grayscale images to RGB if necessary.
+
+    Args:
+        images (tf.Tensor): tensor containing images of shape (b, h, w, c) with c being
+         1 or 3
+
+    Returns:
+        tf.Tensor: tensor containing rgb images of shape (b, h, w, c) with c being 3
+    """
+
+    shape = tf.shape(images)
+    if shape[-1] == 1:
+        return tf.image.grayscale_to_rgb(images)
+    else:
+        return images

@@ -109,8 +109,14 @@ def load_tfrecords(path: str, tfrecord_suffix: str = "tfrecord") -> tf.data.Data
         filter(lambda file: file.endswith(tfrecord_suffix) and os.path.isfile(file),
                files))
     logger.info("Using {num} tfrecords".format(num=len(tfrecord_files)))
-    logger.info("Creating tf-dataset from following tfrecord-files:\n{}".format(
-        ", ".join(tfrecord_files)))
+
+    display_files_amnt = 5
+    log_files_text = "Creating tf-dataset from following tfrecord-files:\n{}".format(
+        ", ".join(tfrecord_files[:display_files_amnt]))
+    if len(tfrecord_files) > display_files_amnt:
+        log_files_text += \
+            f", and {len(tfrecord_files) - display_files_amnt} more file(s)"
+    logger.info(log_files_text)
     # create tfdataset
     dataset = tf.data.TFRecordDataset(tfrecord_files)
 
