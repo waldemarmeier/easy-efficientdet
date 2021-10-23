@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================\
+# modifed
 import math
 
 import tensorflow as tf
 
 from easy_efficientdet.utils import setup_default_logger
 
-_EFFICIENTDET_BATCH_SIZE = 128
-_EFFICIENTDET_BASE_LEARNIN_RATE = .16
+EFFICIENTDET_BATCH_SIZE = 128
+EFFICIENTDET_BASE_LEARNIN_RATE = .16
 # is acutally .0, but don't want to waste time
-_EFFICIENTDET_WARMUP_LEARNING_RATE = .0005
+EFFICIENTDET_WARMUP_LEARNING_RATE = .0005
 
 
 class CosineLrSchedule(tf.optimizers.schedules.LearningRateSchedule):
@@ -48,12 +49,13 @@ class CosineLrSchedule(tf.optimizers.schedules.LearningRateSchedule):
         self.lr_warmup_step = lr_warmup_step
         self.decay_steps = float(total_steps - lr_warmup_step)
         # TODO fix logging issues, add missing values
-        values = f"\ntotal_steps: {total_steps}\nwarmup_steps: "
-        "{self.warmup_steps}"
-        values += f"\nadjusted_lr: {adjusted_lr}\nwarmup_learning_rate: "
-        "{self.warmup_lr}"
+        values = f"total_steps: {total_steps}, "
+        values += f"warmup_steps: {self.warmup_steps}, "
+        values += f"adjusted_lr: {adjusted_lr}, "
+        values += f"warmup_learning_rate: {self.warmup_lr}"
         self.logger.info(
-            f"Initializing WarmUpCosineDecayScheduler with following values:{values}")
+            f"Initializing WarmUpCosineDecayScheduler with following values: {values}")
+        self.history = []
 
     def __call__(self, step):
         linear_warmup = (self.lr_warmup_init +
@@ -61,7 +63,9 @@ class CosineLrSchedule(tf.optimizers.schedules.LearningRateSchedule):
                           (self.adjusted_lr - self.lr_warmup_init)))
         cosine_lr = 0.5 * self.adjusted_lr * (
             1 + tf.cos(math.pi * tf.cast(step, tf.float32) / self.decay_steps))
-        return tf.where(step < self.lr_warmup_step, linear_warmup, cosine_lr)
+        curr_lr = tf.where(step < self.lr_warmup_step, linear_warmup, cosine_lr)
+        self.history.append({"step": step, "lr": curr_lr})
+        return curr_lr
 
     @classmethod
     def get_effdet_lr_scheduler(cls,
@@ -71,7 +75,7 @@ class CosineLrSchedule(tf.optimizers.schedules.LearningRateSchedule):
                                 warmup_epochs: int = 3):
 
         # e.g. if lr is 8 -> relative_bs=(8/128) or (1/16)
-        relative_bs = batch_size / _EFFICIENTDET_BATCH_SIZE
+        relative_bs = batch_size / EFFICIENTDET_BATCH_SIZE
 
         steps = int(train_ds_size / batch_size)
         total_steps = steps * epochs
@@ -79,8 +83,8 @@ class CosineLrSchedule(tf.optimizers.schedules.LearningRateSchedule):
 
         # efficientdet paper uses huge batch sizes, decrease learning rates
         # proportionally to make sure, that training is stable
-        base_lr = _EFFICIENTDET_BASE_LEARNIN_RATE * relative_bs
-        warmup_lr = _EFFICIENTDET_WARMUP_LEARNING_RATE * relative_bs
+        base_lr = EFFICIENTDET_BASE_LEARNIN_RATE * relative_bs
+        warmup_lr = EFFICIENTDET_WARMUP_LEARNING_RATE * relative_bs
 
         return cls(adjusted_lr=base_lr,
                    lr_warmup_init=warmup_lr,
