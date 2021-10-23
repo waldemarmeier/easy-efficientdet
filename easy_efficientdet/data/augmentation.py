@@ -1,7 +1,9 @@
 from typing import Optional, Tuple
 
 import tensorflow as tf
-from tensorflow.image import ResizeMethod
+
+# otherwise, the linter does not get it
+ResizeMethod = tf.image.ResizeMethod
 
 
 def augment_data_builder(output_size: int = 512,
