@@ -1,7 +1,7 @@
 import logging
 import sys
 from numbers import Number
-from typing import Sequence, Union
+from typing import Sequence, Set, Union
 
 import tensorflow as tf
 
@@ -25,6 +25,18 @@ def setup_default_logger(name: str) -> logging.Logger:
     logger.addHandler(handler)
 
     return logger
+
+
+class DataSplit:
+
+    TRAIN = "train"
+    VALIDATION = "val"
+    TRAIN_VAL = "train/val"
+    TEST = "test"
+
+    @classmethod
+    def get_values(cls) -> Set[str]:
+        return set(cls.TRAIN, cls.VALIDATION, cls.TRAIN_VAL, cls.TRAIN)
 
 
 def convert_to_centroids(boxes):
