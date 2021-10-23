@@ -199,6 +199,10 @@ def create_tfrecords(
         raise ValueError(f"annotation should be 'coco' or 'voc', {dataset_type} is"
                          " not supported")
 
+    if not os.path.exists(output_dir):
+        logger.info(f"creating output directory {output_dir}")
+        os.mkdir(output_dir)
+
     label_map = read_label_map(path_labelmap)
 
     if dataset_type == "coco":
@@ -364,7 +368,7 @@ def main():
         if dataset_type == "coco":
             create_labelmap_coco(input_anno, path_labelmap)
         else:
-            create_labelmap_voc(input_anno, path_labelmap)
+            create_labelmap_voc(Path(input_anno), path_labelmap)
 
     create_tfrecords(
         input_img=input_img,
