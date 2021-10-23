@@ -29,7 +29,7 @@ def create_labelmap_coco(annotations_path: str, labelmap_file: str):
     logger.info(f"created labelmap file {labelmap_file}")
 
 
-def create_labelmap_voc(data_dir: str, labelmap_file: str):
+def create_labelmap_voc(data_dir: pathlib.Path, labelmap_file: str):
 
     object_name_set = set()
 
