@@ -13,9 +13,9 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.layers.experimental import SyncBatchNormalization
 
 
-def batchnorm_builder(sync_bn: bool, **kwargs):
+def batchnorm_factory(sync: bool, **kwargs):
 
-    if sync_bn:
+    if sync:
         return SyncBatchNormalization(**kwargs)
     else:
         return BatchNormalization(**kwargs)
@@ -85,8 +85,8 @@ class ChangeDim(keras.layers.Layer):
             padding="same",
             name="chdim_1x1_conv",
         )
-        self.chdim_bn = batchnorm_builder(
-            sync_bn=bn_sync,
+        self.chdim_bn = batchnorm_factory(
+            sync=bn_sync,
             momentum=bn_momentum,
             epsilon=bn_epsilon,
         )
@@ -226,8 +226,8 @@ class SeparableConvBlock(keras.layers.Layer):
             use_bias=use_bias,
             **conv_kwargs,
         )
-        self.bn = batchnorm_builder(
-            sync_bn=bn_sync,
+        self.bn = batchnorm_factory(
+            sync=bn_sync,
             momentum=bn_momentum,
             epsilon=bn_epsilon,
             name="sep_conv_bn",
@@ -550,8 +550,8 @@ class PredLayer(keras.layers.Layer):
                 bias_initializer="zeros",
                 depthwise_initializer=keras.initializers.VarianceScaling(),
                 pointwise_initializer=keras.initializers.VarianceScaling(),
-                depthwise_regularizer=keras.regularizers.L2(l2=0.00004),
-                pointwise_regularizer=keras.regularizers.L2(l2=0.00004),
+                depthwise_regularizer=keras.regularizers.L2(l2=4e-05),
+                pointwise_regularizer=keras.regularizers.L2(l2=4e-05),
             )
             setattr(self, f"{self.CONV_PREFIX}{i}", sep_conv_layer)
 
@@ -560,8 +560,8 @@ class PredLayer(keras.layers.Layer):
         # is this really necessary?
         for i in range(depth):
             for j in range(3, 8):  # from 3,..,7 for every level in FPN ouput
-                bn = batchnorm_builder(
-                    sync_bn=bn_sync,
+                bn = batchnorm_factory(
+                    sync=bn_sync,
                     momentum=bn_momentum,
                     epsilon=bn_epsilon,
                     name=f"bn_{self.name}_num{i}_level{j}",
@@ -675,7 +675,7 @@ class ClassPredLayer(PredLayer):
         bn_sync: bool = False,
         bn_momentum: float = 0.99,
         bn_epsilon: float = 1e-3,
-        name: str = "box_pred",
+        name: str = "cls_pred",
     ):
         super().__init__(
             width=width,
@@ -725,9 +725,6 @@ class ClassPredLayer(PredLayer):
 
             fpn_level = self.head(fpn_level)
             fpn_level = self.reshape(fpn_level)
-            # @todo: depending on loss function might be used again
-            # fpn_level = self._sigm_actv(fpn_level) # this is probably not really
-            # necessary
 
             outputs.append(fpn_level)
 

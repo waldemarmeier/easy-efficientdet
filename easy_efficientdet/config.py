@@ -4,15 +4,28 @@ import os
 from copy import deepcopy
 from datetime import datetime
 from numbers import Number
-from typing import Any, Callable, ClassVar, Dict, Optional, Sequence, Union
+from typing import Any, Callable, ClassVar, Dict, Optional, Sequence, Tuple, Union
 
 import tensorflow as tf
-from tensorflow.image import ResizeMethod
 from tensorflow.keras.losses import Reduction
 
-from easy_efficientdet.utils import setup_default_logger
+from easy_efficientdet.data.preprocessing import init_data
+from easy_efficientdet.losses import ObjectDetectionLoss
+from easy_efficientdet.training import CosineLrSchedule
+from easy_efficientdet.utils import (
+    DataSplit,
+    convert_image_to_rgb,
+    setup_default_logger,
+)
 
+# works better with linter
+ResizeMethod = tf.image.ResizeMethod
 logger = setup_default_logger("Config")
+
+PREPROCESSING_FUNCS = {
+    "tf.identity": tf.identity,
+    "convert_image_to_rgb": convert_image_to_rgb
+}
 
 
 @dataclasses.dataclass
@@ -28,6 +41,8 @@ class ObjectDetectionConfig:
     # model parameers
     efficientdet_version: int
     num_cls: int
+    bn_sync: bool
+    path_weights: Optional[str]
     # training (and later inference) parameters
     intermediate_scales: Union[Sequence[Number], int]
     aspect_ratios: Sequence[Number]
@@ -35,7 +50,7 @@ class ObjectDetectionConfig:
     min_level: int
     max_level: int
     box_scales: Optional[Sequence[Number]]
-    image_preprocessor: Callable
+    image_preprocessor: Union[Callable, str]
     match_iou: float
     ignore_iou: float
     # loss  parameters
@@ -46,6 +61,12 @@ class ObjectDetectionConfig:
     reduction: Union[str, Reduction]
     # training
     batch_size: int
+    learning_rate: Union[str, float]
+    momentum: float
+    weight_decay: float
+    epochs: int
+    warmup_epochs: int
+    multi_gpu: bool
     # augmentation params
     scale_min: float
     scale_max: float
@@ -56,8 +77,79 @@ class ObjectDetectionConfig:
     horizontal_flip_prob: float
     # data stuff
     train_data_path: str
+    train_data_size: Optional[int]
     val_data_path: str
+    val_data_size: Optional[int]
     tfrecord_suffix: str
+
+    def init_data(
+        self,
+        data_split: Union[DataSplit, str],
+        auto_train_data_size: bool = True
+    ) -> Union[tf.data.Dataset, Tuple[tf.data.Dataset]]:
+
+        if data_split in (DataSplit.TRAIN, DataSplit.TRAIN_VAL):
+            if (not auto_train_data_size) and (self.train_data_size is None):
+                logger.warning(
+                    "Training data size is neither inferred nor set in config")
+
+        if data_split == DataSplit.TRAIN_VAL:
+
+            if self.train_data_path is not None and self.val_data_path is not None:
+                train_data, val_data = init_data(self, data_split, auto_train_data_size)
+            else:
+                raise ValueError(f"For data split {data_split} 'train_data_path' and "
+                                 "'val_data_path' properties have to be set")
+
+            if auto_train_data_size:
+                _cardinality_num = \
+                    train_data.cardinality().numpy() * self.batch_size
+                self._update_train_data_size(_cardinality_num)
+
+            return train_data, val_data
+
+        elif data_split == DataSplit.TRAIN:
+
+            train_data = init_data(self, DataSplit.TRAIN)
+            if auto_train_data_size:
+                _cardinality_num = \
+                    train_data.cardinality().numpy() * self.batch_size
+                self._update_train_data_size(_cardinality_num)
+            return train_data
+        elif data_split == DataSplit.VALIDATION:
+            return init_data(self, DataSplit.VALIDATION)
+        elif data_split == DataSplit.TEST:
+            raise NotImplementedError("test data split is not implemented")
+
+    def init_training(
+            self) -> Tuple[tf.keras.optimizers.Optimizer, tf.keras.losses.Loss]:
+
+        if isinstance(self.learning_rate, float):
+            logger.warning("Setting learning rate to a constant value is not "
+                           "recommended")
+            learning_rate = self.learning_rate
+        elif self.learning_rate == "auto":
+            if self.train_data_size is None:
+                logger.warning("If learning rate is set to 'auto' training data size "
+                               "should be known")
+            learning_rate = CosineLrSchedule.get_effdet_lr_scheduler(
+                self.train_data_size, self.batch_size, self.epochs)
+
+        optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate,
+                                            momentum=self.momentum,
+                                            decay=self.weight_decay)
+        loss = ObjectDetectionLoss(**self.get_loss_config())
+
+        return (optimizer, loss)
+
+    def _update_train_data_size(self, train_data_size: int) -> None:
+        if (train_data_size is not None) \
+                and (train_data_size != tf.data.UNKNOWN_CARDINALITY):
+            print("train data size", train_data_size)
+            logger.info(f"'train_data_size' property is updated to {train_data_size}'")
+            self.train_data_size = train_data_size
+        else:
+            logger.warning("Unable to infer training data size")
 
     @property
     def num_anchors(self) -> int:
@@ -76,6 +168,7 @@ class ObjectDetectionConfig:
             "version": self.efficientdet_version,
             "num_cls": self.num_cls,
             "num_anchors": self.num_anchors,
+            "path_weights": self.path_weights,
         }
 
     def get_loss_config(self) -> Dict[str, Any]:
@@ -114,7 +207,7 @@ class ObjectDetectionConfig:
             "ignore_iou": self.ignore_iou,
         }
 
-    def serialize(self, file_path: Optional[str] = None) -> None:
+    def save(self, file_path: Optional[str] = None) -> None:
 
         if file_path is None:
             file_path = self._get_default_file_name()
@@ -146,6 +239,11 @@ class ObjectDetectionConfig:
         with open(file_path, 'w') as fp:
             json.dump(config, fp)
 
+    @classmethod
+    def load(path: str):
+        # TODO implement loading
+        raise NotImplementedError("loading not implemented yet")
+
     def _get_default_file_name(self) -> str:
         return self.file_name_template\
                 .format(version=self.efficientdet_version,
@@ -156,6 +254,7 @@ def DefaultConfig(num_cls: int,
                   batch_size: int,
                   train_data_path: str,
                   val_data_path: str,
+                  epochs: int,
                   training_image_size: int = 512,
                   efficientdet_version: int = 0,
                   bw_image_data: bool = False,
@@ -163,6 +262,7 @@ def DefaultConfig(num_cls: int,
     # add here path to train
     default_config = {
         "date": datetime.now().strftime('%Y%m%d%H%M'),
+        "path_weights": None,
         "intermediate_scales": 3,
         "aspect_ratios": [0.5, 1.0, 2.0],
         "stride_anchor_size_ratio": 4.0,
@@ -184,6 +284,14 @@ def DefaultConfig(num_cls: int,
         "seed": None,
         "tfrecord_suffix": "tfrecord",
         "horizontal_flip_prob": .5,
+        "train_data_size": None,
+        "val_data_size": None,
+        "learning_rate": "auto",
+        "momentum": .9,
+        "weight_decay": 4e-5,
+        "warmup_epochs": 3,
+        "multi_gpu": False,
+        "bn_sync": False,
     }
 
     # get valid keys used later for validation of user input
@@ -195,6 +303,17 @@ def DefaultConfig(num_cls: int,
     default_config["num_cls"] = num_cls
     default_config["train_data_path"] = train_data_path
     default_config["val_data_path"] = val_data_path
+    default_config["epochs"] = epochs
+
+    # multi-gpu training is set to true, use sync bn if not specified otherwise
+    if "multi_gpu" in kwargs:
+        if "bn_sync" not in kwargs:
+            logger.info("Using SyncBatchNormalitzation layers because multi-gpu "
+                        "training is selected")
+            default_config["bn_sync"] = True
+        elif not kwargs["bn_sync"]:
+            logger.warning("Multi-GPU training without SyncBatchNormalization is not"
+                           " recommended. 'bn_sync' should be True")
 
     if bw_image_data is True:
         default_config["image_shape"] = (training_image_size, training_image_size, 1)
@@ -206,10 +325,6 @@ def DefaultConfig(num_cls: int,
     else:
         default_config["image_shape"] = (training_image_size, training_image_size, 3)
 
-    # loss parameters
-    # training
-    # augmentation params
-
     if len(kwargs) > 0:
         # check if all kwargs are valid
         kwargs_fields = frozenset(kwargs.keys())
@@ -220,5 +335,35 @@ def DefaultConfig(num_cls: int,
         else:
             for k, v in kwargs.items():
                 default_config[k] = v
+
+    _image_preprocessor = default_config["image_preprocessor"]
+
+    if isinstance(_image_preprocessor, str):
+        if _image_preprocessor in PREPROCESSING_FUNCS:
+            default_config["image_preprocessor"] = \
+                PREPROCESSING_FUNCS[_image_preprocessor]
+        else:
+            raise ValueError("Uknown 'image_preprocessor' function "
+                             f"{_image_preprocessor}")
+
+    if default_config["train_data_path"] is None:
+        logger.warning("'train_data_path' has to be provided so set up "
+                       "training automatically using Config object")
+
+    if default_config["train_data_size"] is not None:
+        logger.warning("training data size is set to "
+                       f"{default_config['train_data_size']}. "
+                       "Training data size has implications for automatic training "
+                       "setup (learning rate schedule)). Make sure make sure "
+                       "'train_data_size' is set correctly")
+
+    if not (default_config["learning_rate"] == "auto"
+            or isinstance(default_config["learning_rate"], float)):
+        logger.warning("Learning rate should be set to 'auto' or a constant "
+                       "float value")
+
+    if default_config["warmup_epochs"] > epochs:
+        logger.warning("Defined more warmup epochs than overall training epochs:"
+                       f"{default_config['warmup_epochs']} vs. {epochs}")
 
     return ObjectDetectionConfig(**default_config)

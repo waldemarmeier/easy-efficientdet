@@ -1,3 +1,4 @@
+import os
 import re
 from numbers import Number
 from typing import Optional, Sequence, Tuple, Union
@@ -5,6 +6,7 @@ from typing import Optional, Sequence, Tuple, Union
 import tensorflow as tf
 
 from easy_efficientdet._third_party import efficientnet as sync_bn_effnet_factory
+from easy_efficientdet.config import ObjectDetectionConfig
 from easy_efficientdet.layers import BiFPN, BoxPredLayer, ClassPredLayer, PreBiFPN
 from easy_efficientdet.utils import setup_default_logger
 
@@ -31,37 +33,97 @@ BN_MOMENTUM = 0.99
 BN_EPSILON = 0.001
 
 
+class EfficientDetBuilder:
+    def __init__(self,
+                 version: Optional[int] = None,
+                 num_cls: Optional[int] = None,
+                 num_anchors: Optional[int] = None,
+                 image_shape: Optional[Union[Tuple, int]] = None,
+                 bn_sync: bool = False,
+                 multi_gpu: bool = False):
+        self.version = version
+        self.num_cls = num_cls
+        self.num_anchors = num_anchors
+        self.image_shape = image_shape
+        self.bn_sync = bn_sync
+        self.multi_gpu = multi_gpu
+
+    @staticmethod
+    def from_config(config: ObjectDetectionConfig) -> tf.keras.Model:
+        return EfficientDet(**config.get_model_config())
+
+    def build(self) -> tf.keras.Model:
+        return EfficientDet(self.version, self.num_cls, self.image_shape, self.bn_sync,
+                            self.multi_gpu)
+
+    @staticmethod
+    def download_model(url: str,
+                       save_dir: str = './',
+                       md5_hash: Optional[str] = None,
+                       file_name: Optional[str] = None) -> str:
+
+        if file_name is None:
+            file_name = os.path.basename(url)
+
+        path_abs = os.path.join(save_dir, file_name)
+
+        logger.info(f"Saving model weights to {path_abs}")
+
+        if md5_hash is None:
+            logger.warning("No MD5 hash provided for integrity check")
+
+        tf.keras.utils.get_file(origin=url,
+                                fname=file_name,
+                                md5_hash=md5_hash,
+                                cache_dir=save_dir,
+                                cache_subdir='')
+
+        return path_abs
+
+
 def EfficientDet(version: int = 0,
                  num_cls: int = 4,
                  num_anchors: int = 9,
                  image_shape: Optional[Union[Tuple, int]] = None,
-                 bn_sync: bool = False):
+                 path_weights: Optional[str] = None,
+                 bn_sync: bool = False,
+                 multi_gpu: bool = False):
+
     image_shape = _get_image_size(image_shape, version)
     backbone_num = BACKBONE_NUM[version]
     num_w_bifpn = NUM_W_BiFPN[version]
     num_head_layers = NUM_HEAD_LAYERS[version]
     num_bifpn_layers = BIFPN_LAYERS[version]
 
-    return effdet_functional(version=version,
-                             num_cls=num_cls,
-                             num_anchors=num_anchors,
-                             image_shape=image_shape,
-                             backbone_num=backbone_num,
-                             bn_sync=bn_sync,
-                             bn_momentum=BN_MOMENTUM,
-                             bn_epsilon=BN_EPSILON,
-                             num_w_bifpn=num_w_bifpn,
-                             num_bifpn_layers=num_bifpn_layers,
-                             num_head_layers=num_head_layers,
-                             fast_fusion_epsilon=FAST_FUSION_EPSILON,
-                             weighted_fusion_type=WEIGHTED_FUSION_TYPE)
+    kwargs = dict(version=version,
+                  num_cls=num_cls,
+                  num_anchors=num_anchors,
+                  image_shape=image_shape,
+                  backbone_num=backbone_num,
+                  bn_sync=bn_sync,
+                  path_weights=path_weights,
+                  bn_momentum=BN_MOMENTUM,
+                  bn_epsilon=BN_EPSILON,
+                  num_w_bifpn=num_w_bifpn,
+                  num_bifpn_layers=num_bifpn_layers,
+                  num_head_layers=num_head_layers,
+                  fast_fusion_epsilon=FAST_FUSION_EPSILON,
+                  weighted_fusion_type=WEIGHTED_FUSION_TYPE)
+
+    if multi_gpu:
+        with tf.distribute.MirroredStrategy():
+            model = effdet_functional(**kwargs)
+        return model
+    else:
+        return effdet_functional(**kwargs)
 
 
 def effdet_functional(version: int, num_cls: int, num_anchors: int,
                       image_shape: Sequence[int], backbone_num: int, bn_sync: bool,
                       bn_momentum: float, bn_epsilon: float, num_w_bifpn: int,
                       num_bifpn_layers: int, num_head_layers: int,
-                      fast_fusion_epsilon: float, weighted_fusion_type: float):
+                      fast_fusion_epsilon: float, weighted_fusion_type: str,
+                      path_weights: str):
 
     efficientnet = _create_backbone(backbone_num, image_shape, bn_sync)
     fpn_input_layers = _extract_layers(efficientnet)
@@ -105,8 +167,7 @@ def effdet_functional(version: int, num_cls: int, num_anchors: int,
         num_cls=num_cls,
     )
 
-    inp = tf.keras.layers.Input(image_shape)
-    x = inp
+    inp = x = tf.keras.layers.Input(image_shape)
 
     if image_shape[-1] == 1:
         x = tf.image.grayscale_to_rgb(x)
@@ -121,6 +182,9 @@ def effdet_functional(version: int, num_cls: int, num_anchors: int,
     effdet_model = tf.keras.Model(inputs=inp,
                                   outputs=heads_out,
                                   name=f"efficientdet-d{version}")
+
+    if path_weights is not None:
+        effdet_model.load_weights(path_weights, by_name=True, skip_mismatch=True)
 
     return effdet_model
 
