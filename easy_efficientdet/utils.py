@@ -1,9 +1,11 @@
 import logging
 import sys
 from numbers import Number
-from typing import Sequence, Set, Union
+from typing import Dict, List, Sequence, Set, Union
 
 import tensorflow as tf
+
+LabelMapType = List[Dict[str, Union[str, int]]]
 
 
 def setup_default_logger(name: str) -> logging.Logger:
@@ -58,6 +60,10 @@ def convert_to_centroids(boxes):
         ],
         axis=-1,
     )
+
+
+def tf_round(num, precision: int = 0) -> tf.Tensor:
+    return tf.round(num * (10**precision)) / (10**precision)
 
 
 def convert_to_corners(boxes):

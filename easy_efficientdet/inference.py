@@ -16,6 +16,10 @@ class AdapterNMSResult:
     nmsed_classes: tf.Tensor
 
 
+def build_inference_model():
+    ...
+
+
 class DecodePredictionsSoft(tf.keras.layers.Layer):
     """A Keras layer that decodes predictions of the RetinaNet model.
 
