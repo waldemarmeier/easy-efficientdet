@@ -16,8 +16,34 @@ class AdapterNMSResult:
     nmsed_classes: tf.Tensor
 
 
-def build_inference_model():
-    ...
+def build_inference_model(
+    model: tf.keras.Model,
+    num_cls,
+    image_shape=(512, 512, 3),
+    confidence_threshold=0.05,
+    nms_iou_threshold=0.5,
+    max_detections_per_class=100,
+    max_detections=100,
+    box_variance=None,
+    resize: bool = False,
+) -> tf.keras.Model:
+    decoder = DecodePredictions(num_classes=num_cls,
+                                image_shape=image_shape,
+                                confidence_threshold=confidence_threshold,
+                                nms_iou_threshold=nms_iou_threshold,
+                                max_detections_per_class=max_detections_per_class,
+                                max_detections=max_detections)
+
+    if resize:
+        inp = x = tf.keras.Input((None, None, image_shape[2]))
+        x = tf.image.resize(image_shape)
+    else:
+        inp = x = tf.keras.Input(image_shape)
+    x = model(x, training=False)
+    x = decoder(x)
+    inference_model = tf.keras.Model(inp, x)
+
+    return inference_model
 
 
 class DecodePredictionsSoft(tf.keras.layers.Layer):
@@ -43,6 +69,7 @@ class DecodePredictionsSoft(tf.keras.layers.Layer):
                  max_detections_per_class=100,
                  max_detections=100,
                  box_variance=None,
+                 sgima: float = .05,
                  **kwargs):
         super().__init__(**kwargs)
         self.num_classes = num_classes
@@ -50,6 +77,7 @@ class DecodePredictionsSoft(tf.keras.layers.Layer):
         self.nms_iou_threshold = nms_iou_threshold
         self.max_detections_per_class = max_detections_per_class
         self.max_detections = max_detections
+        self.sigma = sgima
 
         self._anchor_box = generate_anchor_boxes(image_shape)
         self.box_variance = box_variance
@@ -57,7 +85,7 @@ class DecodePredictionsSoft(tf.keras.layers.Layer):
                                      max_output_size=self.max_detections_per_class,
                                      iou_threshold=self.nms_iou_threshold,
                                      score_threshold=self.confidence_threshold,
-                                     soft_nms_sigma=.5)
+                                     soft_nms_sigma=sgima)
 
     def _decode_box_predictions(self, anchor_boxes, box_predictions):
 
@@ -122,6 +150,8 @@ class DecodePredictionsSoft(tf.keras.layers.Layer):
                 idx_cls, scores_cls = self._soft_nms_fun(boxes=sample[:, :4],
                                                          scores=sample[:, cls_num + 4])
                 num_valid_detections_cls = tf.shape(idx_cls)[0]
+                # tf.print('cls', cls_num, 'num valid detections',
+                #   num_valid_detections_cls)
                 num_detections_cls = num_detections_cls.write(
                     cls_num, num_valid_detections_cls)
                 diff_detections_cls = \
