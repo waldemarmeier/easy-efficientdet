@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from functools import partial
+from typing import Optional, Sequence
 
 import tensorflow as tf
 
@@ -18,15 +19,16 @@ class AdapterNMSResult:
 
 def build_inference_model(
     model: tf.keras.Model,
-    num_cls,
-    image_shape=(512, 512, 3),
-    confidence_threshold=0.05,
-    nms_iou_threshold=0.5,
-    max_detections_per_class=100,
-    max_detections=100,
-    box_variance=None,
+    num_cls: int,
+    image_shape: Sequence[int] = (512, 512, 3),
+    confidence_threshold: float = 0.05,
+    nms_iou_threshold: float = 0.5,
+    max_detections_per_class: int = 100,
+    max_detections: int = 100,
+    box_variance: Optional[Sequence[float]] = None,
     resize: bool = False,
 ) -> tf.keras.Model:
+
     decoder = DecodePredictions(num_classes=num_cls,
                                 image_shape=image_shape,
                                 confidence_threshold=confidence_threshold,
@@ -36,7 +38,7 @@ def build_inference_model(
 
     if resize:
         inp = x = tf.keras.Input((None, None, image_shape[2]))
-        x = tf.image.resize(image_shape)
+        x = tf.image.resize(x, image_shape[:2])
     else:
         inp = x = tf.keras.Input(image_shape)
     x = model(x, training=False)
@@ -62,13 +64,13 @@ class DecodePredictionsSoft(tf.keras.layers.Layer):
         predictions.
     """
     def __init__(self,
-                 num_classes=4,
-                 image_shape=(512, 512),
-                 confidence_threshold=0.05,
-                 nms_iou_threshold=0.5,
-                 max_detections_per_class=100,
-                 max_detections=100,
-                 box_variance=None,
+                 num_classes: int = 4,
+                 image_shape: Sequence[int] = (512, 512),
+                 confidence_threshold: float = 0.05,
+                 nms_iou_threshold: float = 0.5,
+                 max_detections_per_class: int = 100,
+                 max_detections: int = 100,
+                 box_variance: Optional[Sequence[float]] = None,
                  sgima: float = .05,
                  **kwargs):
         super().__init__(**kwargs)
@@ -82,9 +84,9 @@ class DecodePredictionsSoft(tf.keras.layers.Layer):
         self._anchor_box = generate_anchor_boxes(image_shape)
         self.box_variance = box_variance
         self._soft_nms_fun = partial(tf.image.non_max_suppression_with_scores,
-                                     max_output_size=self.max_detections_per_class,
-                                     iou_threshold=self.nms_iou_threshold,
-                                     score_threshold=self.confidence_threshold,
+                                     max_output_size=max_detections_per_class,
+                                     iou_threshold=nms_iou_threshold,
+                                     score_threshold=confidence_threshold,
                                      soft_nms_sigma=sgima)
 
     def _decode_box_predictions(self, anchor_boxes, box_predictions):
