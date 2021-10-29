@@ -32,7 +32,7 @@ setup(
             'generate_tfrecord = easy_efficientdet.tools.generate_tfrecord:main',
             'create_labelmap = easy_efficientdet.tools.create_labelmap:main',
             'prepare_voc = '
-            'easy_efficientdet.tools.create_object_detection_dataset:main',
+            'easy_efficientdet.tools.prepare_voc:main',
         ],
     },
     classifiers=[
