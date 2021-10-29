@@ -50,9 +50,9 @@ class CosineLrSchedule(tf.optimizers.schedules.LearningRateSchedule):
         self.decay_steps = float(total_steps - lr_warmup_step)
         # TODO fix logging issues, add missing values
         values = f"total_steps: {total_steps}, "
-        values += f"warmup_steps: {self.warmup_steps}, "
+        values += f"warmup_steps: {self.lr_warmup_step}, "
         values += f"adjusted_lr: {adjusted_lr}, "
-        values += f"warmup_learning_rate: {self.warmup_lr}"
+        values += f"warmup_learning_rate: {self.lr_warmup_init}"
         self.logger.info(
             f"Initializing WarmUpCosineDecayScheduler with following values: {values}")
         self.history = []
