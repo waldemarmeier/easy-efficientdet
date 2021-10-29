@@ -1,7 +1,8 @@
 import logging
+import os
 import sys
 from numbers import Number
-from typing import Dict, List, Sequence, Set, Union
+from typing import Dict, List, Optional, Sequence, Set, Union
 
 import tensorflow as tf
 
@@ -27,6 +28,9 @@ def setup_default_logger(name: str) -> logging.Logger:
     logger.addHandler(handler)
 
     return logger
+
+
+logger = setup_default_logger("utils")
 
 
 class DataSplit:
@@ -213,3 +217,27 @@ def convert_image_to_rgb(images: tf.Tensor) -> tf.Tensor:
         return tf.image.grayscale_to_rgb(images)
     else:
         return images
+
+
+def download_model(url: str,
+                   save_dir: str = './',
+                   md5_hash: Optional[str] = None,
+                   file_name: Optional[str] = None) -> str:
+
+    if file_name is None:
+        file_name = os.path.basename(url)
+
+    path_abs = os.path.join(save_dir, file_name)
+
+    logger.info(f"Saving model weights to {path_abs}")
+
+    if md5_hash is None:
+        logger.warning("No MD5 hash provided for integrity check")
+
+    tf.keras.utils.get_file(origin=url,
+                            fname=file_name,
+                            md5_hash=md5_hash,
+                            cache_dir=save_dir,
+                            cache_subdir='')
+
+    return path_abs

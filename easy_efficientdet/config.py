@@ -4,19 +4,12 @@ import os
 from copy import deepcopy
 from datetime import datetime
 from numbers import Number
-from typing import Any, Callable, ClassVar, Dict, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, ClassVar, Dict, Optional, Sequence, Union
 
 import tensorflow as tf
 from tensorflow.keras.losses import Reduction
 
-from easy_efficientdet.data.preprocessing import init_data
-from easy_efficientdet.losses import ObjectDetectionLoss
-from easy_efficientdet.training import CosineLrSchedule
-from easy_efficientdet.utils import (
-    DataSplit,
-    convert_image_to_rgb,
-    setup_default_logger,
-)
+from easy_efficientdet.utils import convert_image_to_rgb, setup_default_logger
 
 # works better with linter
 ResizeMethod = tf.image.ResizeMethod
@@ -81,66 +74,6 @@ class ObjectDetectionConfig:
     val_data_path: str
     val_data_size: Optional[int]
     tfrecord_suffix: str
-
-    def init_data(
-        self,
-        data_split: Union[DataSplit, str],
-        auto_train_data_size: bool = True
-    ) -> Union[tf.data.Dataset, Tuple[tf.data.Dataset]]:
-
-        if data_split in (DataSplit.TRAIN, DataSplit.TRAIN_VAL):
-            if (not auto_train_data_size) and (self.train_data_size is None):
-                logger.warning(
-                    "Training data size is neither inferred nor set in config")
-
-        if data_split == DataSplit.TRAIN_VAL:
-
-            if self.train_data_path is not None and self.val_data_path is not None:
-                train_data, val_data = init_data(self, data_split, auto_train_data_size)
-            else:
-                raise ValueError(f"For data split {data_split} 'train_data_path' and "
-                                 "'val_data_path' properties have to be set")
-
-            if auto_train_data_size:
-                _cardinality_num = \
-                    train_data.cardinality().numpy() * self.batch_size
-                self._update_train_data_size(_cardinality_num)
-
-            return train_data, val_data
-
-        elif data_split == DataSplit.TRAIN:
-
-            train_data = init_data(self, DataSplit.TRAIN)
-            if auto_train_data_size:
-                _cardinality_num = \
-                    train_data.cardinality().numpy() * self.batch_size
-                self._update_train_data_size(_cardinality_num)
-            return train_data
-        elif data_split == DataSplit.VALIDATION:
-            return init_data(self, DataSplit.VALIDATION)
-        elif data_split == DataSplit.TEST:
-            raise NotImplementedError("test data split is not implemented")
-
-    def init_training(
-            self) -> Tuple[tf.keras.optimizers.Optimizer, tf.keras.losses.Loss]:
-
-        if isinstance(self.learning_rate, float):
-            logger.warning("Setting learning rate to a constant value is not "
-                           "recommended")
-            learning_rate = self.learning_rate
-        elif self.learning_rate == "auto":
-            if self.train_data_size is None:
-                logger.warning("If learning rate is set to 'auto' training data size "
-                               "should be known")
-            learning_rate = CosineLrSchedule.get_effdet_lr_scheduler(
-                self.train_data_size, self.batch_size, self.epochs)
-
-        optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate,
-                                            momentum=self.momentum,
-                                            decay=self.weight_decay)
-        loss = ObjectDetectionLoss(**self.get_loss_config())
-
-        return (optimizer, loss)
 
     def _update_train_data_size(self, train_data_size: int) -> None:
         if (train_data_size is not None) \

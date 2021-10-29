@@ -1,4 +1,3 @@
-import os
 import re
 from numbers import Number
 from typing import Optional, Sequence, Tuple, Union
@@ -6,7 +5,6 @@ from typing import Optional, Sequence, Tuple, Union
 import tensorflow as tf
 
 from easy_efficientdet._third_party import efficientnet as sync_bn_effnet_factory
-from easy_efficientdet.config import ObjectDetectionConfig
 from easy_efficientdet.layers import BiFPN, BoxPredLayer, ClassPredLayer, PreBiFPN
 from easy_efficientdet.utils import setup_default_logger
 
@@ -31,54 +29,6 @@ WEIGHTED_FUSION_TYPE = "fast_attention"  # currently no other type implemented
 # Batch normalization parameters
 BN_MOMENTUM = 0.99
 BN_EPSILON = 0.001
-
-
-class EfficientDetBuilder:
-    def __init__(self,
-                 version: Optional[int] = None,
-                 num_cls: Optional[int] = None,
-                 num_anchors: Optional[int] = None,
-                 image_shape: Optional[Union[Tuple, int]] = None,
-                 bn_sync: bool = False,
-                 multi_gpu: bool = False):
-        self.version = version
-        self.num_cls = num_cls
-        self.num_anchors = num_anchors
-        self.image_shape = image_shape
-        self.bn_sync = bn_sync
-        self.multi_gpu = multi_gpu
-
-    @staticmethod
-    def from_config(config: ObjectDetectionConfig) -> tf.keras.Model:
-        return EfficientDet(**config.get_model_config())
-
-    def build(self) -> tf.keras.Model:
-        return EfficientDet(self.version, self.num_cls, self.image_shape, self.bn_sync,
-                            self.multi_gpu)
-
-    @staticmethod
-    def download_model(url: str,
-                       save_dir: str = './',
-                       md5_hash: Optional[str] = None,
-                       file_name: Optional[str] = None) -> str:
-
-        if file_name is None:
-            file_name = os.path.basename(url)
-
-        path_abs = os.path.join(save_dir, file_name)
-
-        logger.info(f"Saving model weights to {path_abs}")
-
-        if md5_hash is None:
-            logger.warning("No MD5 hash provided for integrity check")
-
-        tf.keras.utils.get_file(origin=url,
-                                fname=file_name,
-                                md5_hash=md5_hash,
-                                cache_dir=save_dir,
-                                cache_subdir='')
-
-        return path_abs
 
 
 def EfficientDet(version: int = 0,
