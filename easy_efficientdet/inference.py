@@ -43,7 +43,7 @@ def build_inference_model(
         inp = x = tf.keras.Input(image_shape)
     x = model(x, training=False)
     x = decoder(x)
-    inference_model = tf.keras.Model(inp, x)
+    inference_model = tf.keras.Model(inp, x, name=f"inference_{model.name}")
 
     return inference_model
 

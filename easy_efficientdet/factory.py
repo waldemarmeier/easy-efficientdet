@@ -1,15 +1,27 @@
-from typing import Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import tensorflow as tf
 
 from easy_efficientdet._third_party.training import CosineLrSchedule
 from easy_efficientdet.config import ObjectDetectionConfig
 from easy_efficientdet.data.preprocessing import init_data
+from easy_efficientdet.inference import build_inference_model
 from easy_efficientdet.losses import ObjectDetectionLoss
 from easy_efficientdet.model import EfficientDet
 from easy_efficientdet.utils import DataSplit, setup_default_logger
 
 logger = setup_default_logger("efficientdet-factory")
+
+
+class OptType:
+
+    INT8 = "int8"
+    FLOAT16 = "float16"
+    FLOAT32 = "float32"
+
+    @classmethod
+    def is_valid(cls, other: str) -> bool:
+        return other in {cls.INT8, cls.FLOAT16, cls.FLOAT32}
 
 
 class EfficientDetFactory:
@@ -80,3 +92,31 @@ class EfficientDetFactory:
         loss = ObjectDetectionLoss(**self.config.get_loss_config())
 
         return (optimizer, loss)
+
+    def optimize_model(
+        model: tf.keras.Model,
+        filename: str,
+        type: OptType,
+        representative_dataset: Optional[Union[DataSplit, str]] = None,
+        tmp_saved_model_dir="tmp_saved_model_tflite_conversion",
+    ) -> bytes:
+
+        if filename not in OptType.is_valid():
+            ...
+        ...
+
+    @staticmethod
+    def build_inference_model(
+        model: tf.keras.Model,
+        num_cls: int,
+        image_shape: Sequence[int] = (512, 512, 3),
+        confidence_threshold: float = 0.05,
+        nms_iou_threshold: float = 0.5,
+        max_detections_per_class: int = 100,
+        max_detections: int = 100,
+        box_variance: Optional[Sequence[float]] = None,
+        resize: bool = False,
+    ) -> tf.keras.Model:
+        return build_inference_model(model, num_cls, image_shape, confidence_threshold,
+                                     nms_iou_threshold, max_detections_per_class,
+                                     max_detections, box_variance, resize)
