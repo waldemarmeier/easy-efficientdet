@@ -162,23 +162,23 @@ class CocoDetectionEvaluator(object_detection_evaluation.DetectionEvaluator):
 
     def add_single_detected_image_info(self, image_id, detections_dict):
         """Adds detections for a single image to be used for evaluation.
-    If a detection has already been added for this image id, a warning is
-    logged, and the detection is skipped.
-    Args:
-      image_id: A unique string/integer identifier for the image.
-      detections_dict: A dictionary containing -
-        DetectionResultFields.detection_boxes: float32 numpy array of shape
-          [num_boxes, 4] containing `num_boxes` detection boxes of the format
-          [ymin, xmin, ymax, xmax] in absolute image coordinates.
-        DetectionResultFields.detection_scores: float32 numpy array of shape
-          [num_boxes] containing detection scores for the boxes.
-        DetectionResultFields.detection_classes: integer numpy array of shape
-          [num_boxes] containing 1-indexed detection classes for the boxes.
-        DetectionResultFields.detection_keypoints (optional): float numpy array
-          of keypoints with shape [num_boxes, num_keypoints, 2].
-    Raises:
-      ValueError: If groundtruth for the image_id is not available.
-    """
+        If a detection has already been added for this image id, a warning is
+        logged, and the detection is skipped.
+        Args:
+        image_id: A unique string/integer identifier for the image.
+        detections_dict: A dictionary containing -
+            DetectionResultFields.detection_boxes: float32 numpy array of shape
+            [num_boxes, 4] containing `num_boxes` detection boxes of the format
+            [ymin, xmin, ymax, xmax] in absolute image coordinates.
+            DetectionResultFields.detection_scores: float32 numpy array of shape
+            [num_boxes] containing detection scores for the boxes.
+            DetectionResultFields.detection_classes: integer numpy array of shape
+            [num_boxes] containing 1-indexed detection classes for the boxes.
+            DetectionResultFields.detection_keypoints (optional): float numpy array
+            of keypoints with shape [num_boxes, num_keypoints, 2].
+        Raises:
+        ValueError: If groundtruth for the image_id is not available.
+        """
         if image_id not in self._image_ids:
             raise ValueError('Missing groundtruth for image id: {}'.format(image_id))
 
@@ -232,10 +232,10 @@ class CocoDetectionEvaluator(object_detection_evaluation.DetectionEvaluator):
 
     def dump_detections_to_json_file(self, json_output_path):
         """Saves the detections into json_output_path in the format used by MS COCO.
-    Args:
-      json_output_path: String containing the output file's path. It can be also
-        None. In that case nothing will be written to the output file.
-    """
+        Args:
+        json_output_path: String containing the output file's path. It can be also
+            None. In that case nothing will be written to the output file.
+        """
         if json_output_path and json_output_path is not None:
             with tf.gfile.GFile(json_output_path, 'w') as fid:
                 tf.logging.info('Dumping detections to output json file.')
@@ -424,24 +424,24 @@ class CocoDetectionEvaluator(object_detection_evaluation.DetectionEvaluator):
 
     def get_estimator_eval_metric_ops(self, eval_dict):
         """Returns a dictionary of eval metric ops.
-    Note that once value_op is called, the detections and groundtruth added via
-    update_op are cleared.
-    This function can take in groundtruth and detections for a batch of images,
-    or for a single image. For the latter case, the batch dimension for input
-    tensors need not be present.
-    Args:
-      eval_dict: A dictionary that holds tensors for evaluating object detection
-        performance. For single-image evaluation, this dictionary may be
-        produced from eval_util.result_dict_for_single_example(). If multi-image
-        evaluation, `eval_dict` should contain the fields
-        'num_groundtruth_boxes_per_image' and 'num_det_boxes_per_image' to
-        properly unpad the tensors from the batch.
-    Returns:
-      a dictionary of metric names to tuple of value_op and update_op that can
-      be used as eval metric ops in tf.estimator.EstimatorSpec. Note that all
-      update ops must be run together and similarly all value ops must be run
-      together to guarantee correct behaviour.
-    """
+        Note that once value_op is called, the detections and groundtruth added via
+        update_op are cleared.
+        This function can take in groundtruth and detections for a batch of images,
+        or for a single image. For the latter case, the batch dimension for input
+        tensors need not be present.
+        Args:
+        eval_dict: A dictionary that holds tensors for evaluating object detection
+            performance. For single-image evaluation, this dictionary may be
+            produced from eval_util.result_dict_for_single_example(). If multi-image
+            evaluation, `eval_dict` should contain the fields
+            'num_groundtruth_boxes_per_image' and 'num_det_boxes_per_image' to
+            properly unpad the tensors from the batch.
+        Returns:
+        a dictionary of metric names to tuple of value_op and update_op that can
+        be used as eval metric ops in tf.estimator.EstimatorSpec. Note that all
+        update ops must be run together and similarly all value ops must be run
+        together to guarantee correct behaviour.
+        """
         update_op = self.add_eval_dict(eval_dict)
         metric_names = [
             'DetectionBoxes_Precision/mAP', 'DetectionBoxes_Precision/mAP@.50IOU',

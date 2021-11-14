@@ -32,25 +32,25 @@ def FormatFloat(json_str, float_digits):
 
 def Dump(obj, fid, float_digits=-1, **params):
     """Wrapper of json.dump that allows specifying the float precision used.
-  Args:
-    obj: The object to dump.
-    fid: The file id to write to.
-    float_digits: The number of digits of precision when writing floats out.
-    **params: Additional parameters to pass to json.dumps.
-  """
+    Args:
+      obj: The object to dump.
+      fid: The file id to write to.
+      float_digits: The number of digits of precision when writing floats out.
+      **params: Additional parameters to pass to json.dumps.
+    """
     json_str = Dumps(obj, float_digits, **params)
     fid.write(json_str)
 
 
 def Dumps(obj, float_digits=-1, **params):
     """Wrapper of json.dumps that allows specifying the float precision used.
-  Args:
-    obj: The object to dump.
-    float_digits: The number of digits of precision when writing floats out.
-    **params: Additional parameters to pass to json.dumps.
-  Returns:
-    output: JSON string representation of obj.
-  """
+    Args:
+      obj: The object to dump.
+      float_digits: The number of digits of precision when writing floats out.
+      **params: Additional parameters to pass to json.dumps.
+    Returns:
+      output: JSON string representation of obj.
+    """
     json_str = json.dumps(obj, **params)
     if float_digits > -1:
         json_str = FormatFloat(json_str, float_digits)
@@ -59,16 +59,16 @@ def Dumps(obj, float_digits=-1, **params):
 
 def PrettyParams(**params):
     """Returns parameters for use with Dump and Dumps to output pretty json.
-  Example usage:
-    ```json_str = json_utils.Dumps(obj, **json_utils.PrettyParams())```
-    ```json_str = json_utils.Dumps(
-                      obj, **json_utils.PrettyParams(allow_nans=False))```
-  Args:
-    **params: Additional params to pass to json.dump or json.dumps.
-  Returns:
-    params: Parameters that are compatible with json_utils.Dump and
-      json_utils.Dumps.
-  """
+    Example usage:
+      ```json_str = json_utils.Dumps(obj, **json_utils.PrettyParams())```
+      ```json_str = json_utils.Dumps(
+                        obj, **json_utils.PrettyParams(allow_nans=False))```
+    Args:
+      **params: Additional params to pass to json.dump or json.dumps.
+    Returns:
+      params: Parameters that are compatible with json_utils.Dump and
+        json_utils.Dumps.
+    """
     params['float_digits'] = 4
     params['sort_keys'] = True
     params['indent'] = 2

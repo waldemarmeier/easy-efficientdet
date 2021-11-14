@@ -47,74 +47,74 @@ from easy_efficientdet._third_party.tf_object_detection_api.utils import metrics
 
 class DetectionEvaluator(six.with_metaclass(ABCMeta, object)):
     """Interface for object detection evalution classes.
-  Example usage of the Evaluator:
-  ------------------------------
-  evaluator = DetectionEvaluator(categories)
-  # Detections and groundtruth for image 1.
-  evaluator.add_single_groundtruth_image_info(...)
-  evaluator.add_single_detected_image_info(...)
-  # Detections and groundtruth for image 2.
-  evaluator.add_single_groundtruth_image_info(...)
-  evaluator.add_single_detected_image_info(...)
-  metrics_dict = evaluator.evaluate()
-  """
+    Example usage of the Evaluator:
+    ------------------------------
+    evaluator = DetectionEvaluator(categories)
+    # Detections and groundtruth for image 1.
+    evaluator.add_single_groundtruth_image_info(...)
+    evaluator.add_single_detected_image_info(...)
+    # Detections and groundtruth for image 2.
+    evaluator.add_single_groundtruth_image_info(...)
+    evaluator.add_single_detected_image_info(...)
+    metrics_dict = evaluator.evaluate()
+    """
     def __init__(self, categories):
         """Constructor.
-    Args:
-      categories: A list of dicts, each of which has the following keys -
-        'id': (required) an integer id uniquely identifying this category.
-        'name': (required) string representing category name e.g., 'cat', 'dog'.
-    """
+        Args:
+        categories: A list of dicts, each of which has the following keys -
+            'id': (required) an integer id uniquely identifying this category.
+            'name': (required) string representing category name e.g., 'cat', 'dog'.
+        """
         self._categories = categories
 
     def observe_result_dict_for_single_example(self, eval_dict):
         """Observes an evaluation result dict for a single example.
-    When executing eagerly, once all observations have been observed by this
-    method you can use `.evaluate()` to get the final metrics.
-    When using `tf.estimator.Estimator` for evaluation this function is used by
-    `get_estimator_eval_metric_ops()` to construct the metric update op.
-    Args:
-      eval_dict: A dictionary that holds tensors for evaluating an object
-        detection model, returned from
-        eval_util.result_dict_for_single_example().
-    Returns:
-      None when executing eagerly, or an update_op that can be used to update
-      the eval metrics in `tf.estimator.EstimatorSpec`.
-    """
+        When executing eagerly, once all observations have been observed by this
+        method you can use `.evaluate()` to get the final metrics.
+        When using `tf.estimator.Estimator` for evaluation this function is used by
+        `get_estimator_eval_metric_ops()` to construct the metric update op.
+        Args:
+        eval_dict: A dictionary that holds tensors for evaluating an object
+            detection model, returned from
+            eval_util.result_dict_for_single_example().
+        Returns:
+        None when executing eagerly, or an update_op that can be used to update
+        the eval metrics in `tf.estimator.EstimatorSpec`.
+        """
         raise NotImplementedError('Not implemented for this evaluator!')
 
     @abstractmethod
     def add_single_ground_truth_image_info(self, image_id, groundtruth_dict):
         """Adds groundtruth for a single image to be used for evaluation.
-    Args:
-      image_id: A unique string/integer identifier for the image.
-      groundtruth_dict: A dictionary of groundtruth numpy arrays required for
-        evaluations.
-    """
+        Args:
+        image_id: A unique string/integer identifier for the image.
+        groundtruth_dict: A dictionary of groundtruth numpy arrays required for
+            evaluations.
+        """
         pass
 
     @abstractmethod
     def add_single_detected_image_info(self, image_id, detections_dict):
         """Adds detections for a single image to be used for evaluation.
-    Args:
-      image_id: A unique string/integer identifier for the image.
-      detections_dict: A dictionary of detection numpy arrays required for
-        evaluation.
-    """
+        Args:
+        image_id: A unique string/integer identifier for the image.
+        detections_dict: A dictionary of detection numpy arrays required for
+            evaluation.
+        """
         pass
 
     def get_estimator_eval_metric_ops(self, eval_dict):
         """Returns dict of metrics to use with `tf.estimator.EstimatorSpec`.
-    Note that this must only be implemented if performing evaluation with a
-    `tf.estimator.Estimator`.
-    Args:
-      eval_dict: A dictionary that holds tensors for evaluating an object
-        detection model, returned from
-        eval_util.result_dict_for_single_example().
-    Returns:
-      A dictionary of metric names to tuple of value_op and update_op that can
-      be used as eval metric ops in `tf.estimator.EstimatorSpec`.
-    """
+        Note that this must only be implemented if performing evaluation with a
+        `tf.estimator.Estimator`.
+        Args:
+        eval_dict: A dictionary that holds tensors for evaluating an object
+            detection model, returned from
+            eval_util.result_dict_for_single_example().
+        Returns:
+        A dictionary of metric names to tuple of value_op and update_op that can
+        be used as eval metric ops in `tf.estimator.EstimatorSpec`.
+        """
         pass
 
     @abstractmethod
@@ -144,36 +144,36 @@ class ObjectDetectionEvaluator(DetectionEvaluator):
                  nms_iou_threshold=1.0,
                  nms_max_output_boxes=10000):
         """Constructor.
-    Args:
-      categories: A list of dicts, each of which has the following keys -
-        'id': (required) an integer id uniquely identifying this category.
-        'name': (required) string representing category name e.g., 'cat', 'dog'.
-      matching_iou_threshold: IOU threshold to use for matching groundtruth
-        boxes to detection boxes.
-      recall_lower_bound: lower bound of recall operating area.
-      recall_upper_bound: upper bound of recall operating area.
-      evaluate_corlocs: (optional) boolean which determines if corloc scores are
-        to be returned or not.
-      evaluate_precision_recall: (optional) boolean which determines if
-        precision and recall values are to be returned or not.
-      metric_prefix: (optional) string prefix for metric name; if None, no
-        prefix is used.
-      use_weighted_mean_ap: (optional) boolean which determines if the mean
-        average precision is computed directly from the scores and tp_fp_labels
-        of all classes.
-      evaluate_masks: If False, evaluation will be performed based on boxes. If
-        True, mask evaluation will be performed instead.
-      group_of_weight: Weight of group-of boxes.If set to 0, detections of the
-        correct class within a group-of box are ignored. If weight is > 0, then
-        if at least one detection falls within a group-of box with
-        matching_iou_threshold, weight group_of_weight is added to true
-        positives. Consequently, if no detection falls within a group-of box,
-        weight group_of_weight is added to false negatives.
-      nms_iou_threshold: NMS IoU threashold.
-      nms_max_output_boxes: maximal number of boxes after NMS.
-    Raises:
-      ValueError: If the category ids are not 1-indexed.
-    """
+        Args:
+        categories: A list of dicts, each of which has the following keys -
+            'id': (required) an integer id uniquely identifying this category.
+            'name': (required) string representing category name e.g., 'cat', 'dog'.
+        matching_iou_threshold: IOU threshold to use for matching groundtruth
+            boxes to detection boxes.
+        recall_lower_bound: lower bound of recall operating area.
+        recall_upper_bound: upper bound of recall operating area.
+        evaluate_corlocs: (optional) boolean which determines if corloc scores are
+            to be returned or not.
+        evaluate_precision_recall: (optional) boolean which determines if
+            precision and recall values are to be returned or not.
+        metric_prefix: (optional) string prefix for metric name; if None, no
+            prefix is used.
+        use_weighted_mean_ap: (optional) boolean which determines if the mean
+            average precision is computed directly from the scores and tp_fp_labels
+            of all classes.
+        evaluate_masks: If False, evaluation will be performed based on boxes. If
+            True, mask evaluation will be performed instead.
+        group_of_weight: Weight of group-of boxes.If set to 0, detections of the
+            correct class within a group-of box are ignored. If weight is > 0, then
+            if at least one detection falls within a group-of box with
+            matching_iou_threshold, weight group_of_weight is added to true
+            positives. Consequently, if no detection falls within a group-of box,
+            weight group_of_weight is added to false negatives.
+        nms_iou_threshold: NMS IoU threashold.
+        nms_max_output_boxes: maximal number of boxes after NMS.
+        Raises:
+        ValueError: If the category ids are not 1-indexed.
+        """
         super(ObjectDetectionEvaluator, self).__init__(categories)
         self._num_classes = max([cat['id'] for cat in categories])
         if min(cat['id'] for cat in categories) < 1:
@@ -216,18 +216,18 @@ class ObjectDetectionEvaluator(DetectionEvaluator):
 
     def get_internal_state(self):
         """Returns internal state and image ids that lead to the state.
-    Note that only evaluation results will be returned (e.g. not raw predictions
-    or groundtruth.
-    """
+        Note that only evaluation results will be returned (e.g. not raw predictions
+        or groundtruth.
+        """
         return self._evaluation.get_internal_state(), self._image_ids
 
     def merge_internal_state(self, image_ids, state_tuple):
         """Merges internal state with the existing state of evaluation.
-    If image_id is already seen by evaluator, an error will be thrown.
-    Args:
-      image_ids: list of images whose state is stored in the tuple.
-      state_tuple: state.
-    """
+        If image_id is already seen by evaluator, an error will be thrown.
+        Args:
+        image_ids: list of images whose state is stored in the tuple.
+        state_tuple: state.
+        """
         for image_id in image_ids:
             if image_id in self._image_ids:
                 logging.warning('Image with id %s already added.', image_id)
@@ -275,25 +275,25 @@ class ObjectDetectionEvaluator(DetectionEvaluator):
 
     def add_single_ground_truth_image_info(self, image_id, groundtruth_dict):
         """Adds groundtruth for a single image to be used for evaluation.
-    Args:
-      image_id: A unique string/integer identifier for the image.
-      groundtruth_dict: A dictionary containing -
-        standard_fields.InputDataFields.groundtruth_boxes: float32 numpy array
-          of shape [num_boxes, 4] containing `num_boxes` groundtruth boxes of
-          the format [ymin, xmin, ymax, xmax] in absolute image coordinates.
-        standard_fields.InputDataFields.groundtruth_classes: integer numpy array
-          of shape [num_boxes] containing 1-indexed groundtruth classes for the
-          boxes.
-        standard_fields.InputDataFields.groundtruth_difficult: Optional length M
-          numpy boolean array denoting whether a ground truth box is a difficult
-          instance or not. This field is optional to support the case that no
-          boxes are difficult.
-        standard_fields.InputDataFields.groundtruth_instance_masks: Optional
-          numpy array of shape [num_boxes, height, width] with values in {0, 1}.
-    Raises:
-      ValueError: On adding groundtruth for an image more than once. Will also
-        raise error if instance masks are not in groundtruth dictionary.
-    """
+        Args:
+        image_id: A unique string/integer identifier for the image.
+        groundtruth_dict: A dictionary containing -
+            standard_fields.InputDataFields.groundtruth_boxes: float32 numpy array
+            of shape [num_boxes, 4] containing `num_boxes` groundtruth boxes of
+            the format [ymin, xmin, ymax, xmax] in absolute image coordinates.
+            standard_fields.InputDataFields.groundtruth_classes: integer numpy array
+            of shape [num_boxes] containing 1-indexed groundtruth classes for the
+            boxes.
+            standard_fields.InputDataFields.groundtruth_difficult: Optional length M
+            numpy boolean array denoting whether a ground truth box is a difficult
+            instance or not. This field is optional to support the case that no
+            boxes are difficult.
+            standard_fields.InputDataFields.groundtruth_instance_masks: Optional
+            numpy array of shape [num_boxes, height, width] with values in {0, 1}.
+        Raises:
+        ValueError: On adding groundtruth for an image more than once. Will also
+            raise error if instance masks are not in groundtruth dictionary.
+        """
         if image_id in self._image_ids:
             logging.warning('Image with id %s already added.', image_id)
 
@@ -333,23 +333,23 @@ class ObjectDetectionEvaluator(DetectionEvaluator):
 
     def add_single_detected_image_info(self, image_id, detections_dict):
         """Adds detections for a single image to be used for evaluation.
-    Args:
-      image_id: A unique string/integer identifier for the image.
-      detections_dict: A dictionary containing -
-        standard_fields.DetectionResultFields.detection_boxes: float32 numpy
-          array of shape [num_boxes, 4] containing `num_boxes` detection boxes
-          of the format [ymin, xmin, ymax, xmax] in absolute image coordinates.
-        standard_fields.DetectionResultFields.detection_scores: float32 numpy
-          array of shape [num_boxes] containing detection scores for the boxes.
-        standard_fields.DetectionResultFields.detection_classes: integer numpy
-          array of shape [num_boxes] containing 1-indexed detection classes for
-          the boxes.
-        standard_fields.DetectionResultFields.detection_masks: uint8 numpy array
-          of shape [num_boxes, height, width] containing `num_boxes` masks of
-          values ranging between 0 and 1.
-    Raises:
-      ValueError: If detection masks are not in detections dictionary.
-    """
+        Args:
+        image_id: A unique string/integer identifier for the image.
+        detections_dict: A dictionary containing -
+            standard_fields.DetectionResultFields.detection_boxes: float32 numpy
+            array of shape [num_boxes, 4] containing `num_boxes` detection boxes
+            of the format [ymin, xmin, ymax, xmax] in absolute image coordinates.
+            standard_fields.DetectionResultFields.detection_scores: float32 numpy
+            array of shape [num_boxes] containing detection scores for the boxes.
+            standard_fields.DetectionResultFields.detection_classes: integer numpy
+            array of shape [num_boxes] containing 1-indexed detection classes for
+            the boxes.
+            standard_fields.DetectionResultFields.detection_masks: uint8 numpy array
+            of shape [num_boxes, height, width] containing `num_boxes` masks of
+            values ranging between 0 and 1.
+        Raises:
+        ValueError: If detection masks are not in detections dictionary.
+        """
         detection_classes = (
             detections_dict[standard_fields.DetectionResultFields.detection_classes] -
             self._label_id_offset)
@@ -371,15 +371,15 @@ class ObjectDetectionEvaluator(DetectionEvaluator):
 
     def evaluate(self):
         """Compute evaluation result.
-    Returns:
-      A dictionary of metrics with the following fields -
-      1. summary_metrics:
-        '<prefix if not empty>_Precision/mAP@<matching_iou_threshold>IOU': mean
-        average precision at the specified IOU threshold.
-      2. per_category_ap: category specific results with keys of the form
-        '<prefix if not empty>_PerformanceByCategory/
-        mAP@<matching_iou_threshold>IOU/category'.
-    """
+        Returns:
+        A dictionary of metrics with the following fields -
+        1. summary_metrics:
+            '<prefix if not empty>_Precision/mAP@<matching_iou_threshold>IOU': mean
+            average precision at the specified IOU threshold.
+        2. per_category_ap: category specific results with keys of the form
+            '<prefix if not empty>_PerformanceByCategory/
+            mAP@<matching_iou_threshold>IOU/category'.
+        """
         (per_class_ap, mean_ap, per_class_precision, per_class_recall, per_class_corloc,
          mean_corloc) = (self._evaluation.evaluate())
         pascal_metrics = {self._metric_names[0]: mean_ap}
@@ -435,17 +435,17 @@ class ObjectDetectionEvaluator(DetectionEvaluator):
 
     def add_eval_dict(self, eval_dict):
         """Observes an evaluation result dict for a single example.
-            When executing eagerly, once all observations have been observed by this
-            method you can use `.evaluate()` to get the final metrics.
-            When using `tf.estimator.Estimator` for evaluation this function is used by
-            `get_estimator_eval_metric_ops()` to construct the metric update op.
-            Args:
-            eval_dict: A dictionary that holds tensors for evaluating an object
-                detection model, returned from
-                eval_util.result_dict_for_single_example().
-            Returns:
-            None when executing eagerly, or an update_op that can be used to update
-            the eval metrics in `tf.estimator.EstimatorSpec`.
+        When executing eagerly, once all observations have been observed by this
+        method you can use `.evaluate()` to get the final metrics.
+        When using `tf.estimator.Estimator` for evaluation this function is used by
+        `get_estimator_eval_metric_ops()` to construct the metric update op.
+        Args:
+        eval_dict: A dictionary that holds tensors for evaluating an object
+            detection model, returned from
+            eval_util.result_dict_for_single_example().
+        Returns:
+        None when executing eagerly, or an update_op that can be used to update
+        the eval metrics in `tf.estimator.EstimatorSpec`.
         """
         # remove unexpected fields
         eval_dict_filtered = dict()
@@ -559,30 +559,30 @@ class ObjectDetectionEvaluation(object):
                  group_of_weight=0.0,
                  per_image_eval_class=per_image_evaluation.PerImageEvaluation):
         """Constructor.
-    Args:
-      num_groundtruth_classes: Number of ground-truth classes.
-      matching_iou_threshold: IOU threshold used for matching detected boxes to
-        ground-truth boxes.
-      nms_iou_threshold: IOU threshold used for non-maximum suppression.
-      nms_max_output_boxes: Maximum number of boxes returned by non-maximum
-        suppression.
-      recall_lower_bound: lower bound of recall operating area
-      recall_upper_bound: upper bound of recall operating area
-      use_weighted_mean_ap: (optional) boolean which determines if the mean
-        average precision is computed directly from the scores and tp_fp_labels
-        of all classes.
-      label_id_offset: The label id offset.
-      group_of_weight: Weight of group-of boxes.If set to 0, detections of the
-        correct class within a group-of box are ignored. If weight is > 0, then
-        if at least one detection falls within a group-of box with
-        matching_iou_threshold, weight group_of_weight is added to true
-        positives. Consequently, if no detection falls within a group-of box,
-        weight group_of_weight is added to false negatives.
-      per_image_eval_class: The class that contains functions for computing per
-        image metrics.
-    Raises:
-      ValueError: if num_groundtruth_classes is smaller than 1.
-    """
+        Args:
+        num_groundtruth_classes: Number of ground-truth classes.
+        matching_iou_threshold: IOU threshold used for matching detected boxes to
+            ground-truth boxes.
+        nms_iou_threshold: IOU threshold used for non-maximum suppression.
+        nms_max_output_boxes: Maximum number of boxes returned by non-maximum
+            suppression.
+        recall_lower_bound: lower bound of recall operating area
+        recall_upper_bound: upper bound of recall operating area
+        use_weighted_mean_ap: (optional) boolean which determines if the mean
+            average precision is computed directly from the scores and tp_fp_labels
+            of all classes.
+        label_id_offset: The label id offset.
+        group_of_weight: Weight of group-of boxes.If set to 0, detections of the
+            correct class within a group-of box are ignored. If weight is > 0, then
+            if at least one detection falls within a group-of box with
+            matching_iou_threshold, weight group_of_weight is added to true
+            positives. Consequently, if no detection falls within a group-of box,
+            weight group_of_weight is added to false negatives.
+        per_image_eval_class: The class that contains functions for computing per
+            image metrics.
+        Raises:
+        ValueError: if num_groundtruth_classes is smaller than 1.
+        """
         if num_groundtruth_classes < 1:
             raise ValueError('Need at least 1 groundtruth class for evaluation.')
 
@@ -628,11 +628,11 @@ class ObjectDetectionEvaluation(object):
 
     def get_internal_state(self):
         """Returns internal state of the evaluation.
-    NOTE: that only evaluation results will be returned
-    (e.g. no raw predictions or groundtruth).
-    Returns:
-      internal state of the evaluation.
-    """
+        NOTE: that only evaluation results will be returned
+        (e.g. no raw predictions or groundtruth).
+        Returns:
+        internal state of the evaluation.
+        """
         return ObjectDetectionEvaluationState(
             self.num_gt_instances_per_class, self.scores_per_class,
             self.tp_fp_labels_per_class, self.num_gt_imgs_per_class,
@@ -640,10 +640,10 @@ class ObjectDetectionEvaluation(object):
 
     def merge_internal_state(self, state_tuple):
         """Merges internal state of the evaluation with the current state.
-    Args:
-      state_tuple: state tuple representing evaluation state: should be of type
-        ObjectDetectionEvaluationState.
-    """
+        Args:
+        state_tuple: state tuple representing evaluation state: should be of type
+            ObjectDetectionEvaluationState.
+        """
         (num_gt_instances_per_class, scores_per_class, tp_fp_labels_per_class,
          num_gt_imgs_per_class, num_images_correctly_detected_per_class) = (state_tuple)
         assert self.num_class == len(num_gt_instances_per_class)
@@ -665,23 +665,23 @@ class ObjectDetectionEvaluation(object):
                                            groundtruth_is_group_of_list=None,
                                            groundtruth_masks=None):
         """Adds groundtruth for a single image to be used for evaluation.
-    Args:
-      image_key: A unique string/integer identifier for the image.
-      groundtruth_boxes: float32 numpy array of shape [num_boxes, 4] containing
-        `num_boxes` groundtruth boxes of the format [ymin, xmin, ymax, xmax] in
-        absolute image coordinates.
-      groundtruth_class_labels: integer numpy array of shape [num_boxes]
-        containing 0-indexed groundtruth classes for the boxes.
-      groundtruth_is_difficult_list: A length M numpy boolean array denoting
-        whether a ground truth box is a difficult instance or not. To support
-        the case that no boxes are difficult, it is by default set as None.
-      groundtruth_is_group_of_list: A length M numpy boolean array denoting
-        whether a ground truth box is a group-of box or not. To support the case
-        that no boxes are groups-of, it is by default set as None.
-      groundtruth_masks: uint8 numpy array of shape [num_boxes, height, width]
-        containing `num_boxes` groundtruth masks. The mask values range from 0
-        to 1.
-    """
+        Args:
+        image_key: A unique string/integer identifier for the image.
+        groundtruth_boxes: float32 numpy array of shape [num_boxes, 4] containing
+            `num_boxes` groundtruth boxes of the format [ymin, xmin, ymax, xmax] in
+            absolute image coordinates.
+        groundtruth_class_labels: integer numpy array of shape [num_boxes]
+            containing 0-indexed groundtruth classes for the boxes.
+        groundtruth_is_difficult_list: A length M numpy boolean array denoting
+            whether a ground truth box is a difficult instance or not. To support
+            the case that no boxes are difficult, it is by default set as None.
+        groundtruth_is_group_of_list: A length M numpy boolean array denoting
+            whether a ground truth box is a group-of box or not. To support the case
+            that no boxes are groups-of, it is by default set as None.
+        groundtruth_masks: uint8 numpy array of shape [num_boxes, height, width]
+            containing `num_boxes` groundtruth masks. The mask values range from 0
+            to 1.
+        """
         if image_key in self.groundtruth_boxes:
             logging.warning(
                 'image %s has already been added to the ground truth database.',
@@ -794,18 +794,18 @@ class ObjectDetectionEvaluation(object):
                                         groundtruth_is_difficult_list,
                                         groundtruth_is_group_of_list):
         """Update grouth truth statitistics.
-    1. Difficult boxes are ignored when counting the number of ground truth
-    instances as done in Pascal VOC devkit.
-    2. Difficult boxes are treated as normal boxes when computing CorLoc related
-    statitistics.
-    Args:
-      groundtruth_class_labels: An integer numpy array of length M, representing
-        M class labels of object instances in ground truth
-      groundtruth_is_difficult_list: A boolean numpy array of length M denoting
-        whether a ground truth box is a difficult instance or not
-      groundtruth_is_group_of_list: A boolean numpy array of length M denoting
-        whether a ground truth box is a group-of box or not
-    """
+        1. Difficult boxes are ignored when counting the number of ground truth
+        instances as done in Pascal VOC devkit.
+        2. Difficult boxes are treated as normal boxes when computing CorLoc related
+        statitistics.
+        Args:
+        groundtruth_class_labels: An integer numpy array of length M, representing
+            M class labels of object instances in ground truth
+        groundtruth_is_difficult_list: A boolean numpy array of length M denoting
+            whether a ground truth box is a difficult instance or not
+        groundtruth_is_group_of_list: A boolean numpy array of length M denoting
+            whether a ground truth box is a group-of box or not
+        """
         for class_index in range(self.num_class):
             num_gt_instances = np.sum(groundtruth_class_labels[
                 ~groundtruth_is_difficult_list
@@ -821,17 +821,17 @@ class ObjectDetectionEvaluation(object):
 
     def evaluate(self):
         """Compute evaluation result.
-    Returns:
-      A named tuple with the following fields -
-        average_precision: float numpy array of average precision for
-            each class.
-        mean_ap: mean average precision of all classes, float scalar
-        precisions: List of precisions, each precision is a float numpy
-            array
-        recalls: List of recalls, each recall is a float numpy array
-        corloc: numpy float array
-        mean_corloc: Mean CorLoc score for each class, float scalar
-    """
+        Returns:
+        A named tuple with the following fields -
+            average_precision: float numpy array of average precision for
+                each class.
+            mean_ap: mean average precision of all classes, float scalar
+            precisions: List of precisions, each precision is a float numpy
+                array
+            recalls: List of recalls, each recall is a float numpy array
+            corloc: numpy float array
+            mean_corloc: Mean CorLoc score for each class, float scalar
+        """
         if (self.num_gt_instances_per_class == 0).any():
             logging.warning(
                 'The following classes have no ground truth examples: %s',
