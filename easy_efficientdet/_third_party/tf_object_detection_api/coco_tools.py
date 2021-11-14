@@ -48,10 +48,11 @@ except ModuleNotFoundError:
                     "https://github.com/cocodataset/cocoapi"
                     "pip install pycoco")
 
-import json_utils
 import six
 import tensorflow.compat.v1 as tf
 from six.moves import range, zip
+
+from easy_efficientdet._third_party.tf_object_detection_api import json_utils
 
 
 class COCOWrapper(coco.COCO):

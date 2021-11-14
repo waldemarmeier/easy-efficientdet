@@ -19,9 +19,12 @@ Example box operations that are supported:
 """
 from __future__ import absolute_import, division, print_function
 
-import np_box_list
-import np_box_ops
 import numpy as np
+
+from easy_efficientdet._third_party.tf_object_detection_api.utils import (
+    np_box_list,
+    np_box_ops,
+)
 
 
 class SortOrder(object):
