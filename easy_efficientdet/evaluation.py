@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from functools import partial
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -28,7 +28,10 @@ def evaluate_od(dataset: tf.data.Dataset,
                 is_data_parsed: bool = False,
                 remove_sm_bbox_value: float = 0,
                 subtract_one_from_cls: bool = True,
-                batch_size: int = 1):
+                batch_size: int = 1,
+                log_frequency: int = 250):
+
+    sample_counter = 0
 
     # prepare data
     if not is_data_parsed:
@@ -108,6 +111,11 @@ def evaluate_od(dataset: tf.data.Dataset,
             image_id = image_ids[i]
             evaluator.add_single_detected_image_info(image_id=image_id,
                                                      detections_dict=prediction_dict)
+
+            sample_counter += 1
+
+            if (log_frequency > 0) and ((sample_counter % log_frequency) == 0):
+                logger.info(f"currently at sample {sample_counter}")
 
     eval_results = evaluator.evaluate()
     return eval_results
@@ -252,10 +260,10 @@ def remove_small_gt(sample, bbox_threshold=5):
 class GroundTruth:
     groundtruth_boxes: np.ndarray
     groundtruth_classes: np.ndarray
-    groundtruth_is_crowd: Optional = None
-    groundtruth_area: Optional = None
-    groundtruth_keypoints: Optional = None
-    groundtruth_keypoint_visibilities: Optional = None
+    groundtruth_is_crowd: Optional[bool] = None
+    groundtruth_area: Optional[Any] = None
+    groundtruth_keypoints: Optional[Any] = None
+    groundtruth_keypoint_visibilities: Optional[Any] = None
 
     def subtract_one_from_cls(self) -> GroundTruth:
         return self.__class__(
