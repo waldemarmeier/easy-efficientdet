@@ -5,7 +5,6 @@ Original Code:
 https://keras.io/examples/vision/retinanet/#implementing-a-custom-layer-to-decode-predictions
 """
 
-from numbers import Number
 from typing import Optional, Sequence
 
 import tensorflow as tf
@@ -33,7 +32,7 @@ class DecodePredictions(keras.layers.Layer):
     def __init__(
             self,
             num_classes: int = 4,
-            image_shape: Sequence[Number] = (512, 512),
+            image_shape: Sequence[int] = (512, 512),
             confidence_threshold: float = 0.05,
             nms_iou_threshold: float = 0.5,
             max_detections_per_class: int = 100,
@@ -51,7 +50,7 @@ class DecodePredictions(keras.layers.Layer):
         self.anchor_boxes = generate_anchor_boxes(image_shape)
         self.box_variance = box_variance
 
-    def _decode_box_predictions(self, anchor_boxes, box_predictions):
+    def _decode_box_predictions(self, anchor_boxes, box_predictions) -> tf.Tensor:
 
         if self.box_variance is not None:
             boxes = box_predictions * self.box_variance
@@ -68,9 +67,10 @@ class DecodePredictions(keras.layers.Layer):
         boxes_transformed = convert_to_corners(boxes)
         return boxes_transformed
 
-    def call(self, predictions):
+    def call(self, predictions) -> tf.Tensor:
         box_predictions = predictions[:, :, :4]
         cls_predictions = tf.nn.sigmoid(predictions[:, :, 4:])
+        # TODO pre selection of boxes (like in soft nms) based on score
         boxes = self._decode_box_predictions(self.anchor_boxes[None, ...],
                                              box_predictions)
 
