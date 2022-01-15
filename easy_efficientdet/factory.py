@@ -72,20 +72,30 @@ class EfficientDetFactory:
 
         if mult_checkpoints_dir:
             path_latest_chpkt = tf.train.latest_checkpoint(checkpoint_dir)
+            if path_latest_chpkt is None:
+                raise Exception("No valid checkpoint found in directory "
+                                f"{checkpoint_dir}")
+
         else:
             path_latest_chpkt = checkpoint_dir
 
         logger.info(f"using checkpoint with path {path_latest_chpkt}")
 
-        with self.dist_strategy.scope():
-            checkpoint = tf.train.Checkpoint(model)
-            try:
-                checkpoint.restore(path_latest_chpkt).assert_consumed()
-            except AssertionError:
-                logger.warning("an error occurred during restore of checkpoint "
-                               f"{path_latest_chpkt}. Usually, issues with "
-                               "'save_counter' variable can be ignored.")
-                logger.warning(traceback.format_exc())
+        if self.config.multi_gpu is True:
+            with self.dist_strategy.scope():
+                self._restore_checkpoint(model, path_latest_chpkt)
+        else:
+            self._restore_checkpoint(model, path_latest_chpkt)
+
+    def _restore_checkpoint(self, model: tf.keras.Model, checkpoint_path: str) -> None:
+        checkpoint = tf.train.Checkpoint(model)
+        try:
+            checkpoint.restore(checkpoint_path).assert_consumed()
+        except AssertionError:
+            logger.warning(traceback.format_exc())
+            logger.warning("an error occurred during restore of checkpoint "
+                           f"{checkpoint_path}. Usually, issues with "
+                           "'save_counter' variable can be ignored.")
 
     def init_data(
         self,
