@@ -78,7 +78,6 @@ class ObjectDetectionConfig:
     def _update_train_data_size(self, train_data_size: int) -> None:
         if (train_data_size is not None) \
                 and (train_data_size != tf.data.UNKNOWN_CARDINALITY):
-            print("train data size", train_data_size)
             logger.info(f"'train_data_size' property is updated to {train_data_size}'")
             self.train_data_size = train_data_size
         else:
@@ -102,6 +101,8 @@ class ObjectDetectionConfig:
             "num_cls": self.num_cls,
             "num_anchors": self.num_anchors,
             "path_weights": self.path_weights,
+            "multi_gpu": self.multi_gpu,
+            "bn_sync": self.bn_sync,
         }
 
     def get_loss_config(self) -> Dict[str, Any]:
@@ -240,13 +241,13 @@ def DefaultConfig(num_cls: int,
 
     # multi-gpu training is set to true, use sync bn if not specified otherwise
     if "multi_gpu" in kwargs:
-        if "bn_sync" not in kwargs:
+        if ("bn_sync" not in kwargs) and (kwargs["multi_gpu"] is True):
             logger.info("Using SyncBatchNormalitzation layers because multi-gpu "
                         "training is selected")
             default_config["bn_sync"] = True
         elif not kwargs["bn_sync"]:
             logger.warning("Multi-GPU training without SyncBatchNormalization is not"
-                           " recommended. 'bn_sync' should be True")
+                           " recommended. 'bn_sync' should be set to 'True'")
 
     if bw_image_data is True:
         default_config["image_shape"] = (training_image_size, training_image_size, 1)
