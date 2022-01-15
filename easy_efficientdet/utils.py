@@ -1,16 +1,21 @@
 import logging
 import os
-import sys
 from numbers import Number
 from typing import Dict, List, Optional, Sequence, Set, Union
 
 import tensorflow as tf
 
+from easy_efficientdet._third_party.logging import get_logger
+
 LabelMapType = List[Dict[str, Union[str, int]]]
 
 
 def setup_default_logger(name: str) -> logging.Logger:
-    """Creates default logger which logs to stdout.
+    """Creates default logger which logs to stdout or
+    uses the logging setup of the surrouding application.
+
+    The acutal setup is taken from tensorflow with minor
+    modifications.
 
     Args:
         name (str): name of the logger
@@ -18,16 +23,7 @@ def setup_default_logger(name: str) -> logging.Logger:
     Returns:
         logging.Logger: logger object
     """
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
-
-    handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-    return logger
+    return get_logger(name)
 
 
 logger = setup_default_logger("utils")
@@ -79,7 +75,7 @@ def convert_to_corners(boxes):
         `[x, y, width, height]` (centroids).
 
     Returns:
-      converted boxes with shape same as that of boxes.
+      converted boxes with shape same as that of boxes [xmin, ymin, xmax, ymax].
     """
     return tf.concat(
         [
