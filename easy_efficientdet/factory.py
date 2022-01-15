@@ -1,15 +1,17 @@
 import traceback
+from inspect import isgeneratorfunction
 from typing import Generator, Optional, Sequence, Tuple, Union
 
 import tensorflow as tf
 
 from easy_efficientdet._third_party.training import CosineLrSchedule
+from easy_efficientdet.anchors import generate_anchor_boxes
 from easy_efficientdet.config import ObjectDetectionConfig
 from easy_efficientdet.data.preprocessing import init_data
 from easy_efficientdet.inference import build_inference_model
 from easy_efficientdet.losses import ObjectDetectionLoss
 from easy_efficientdet.model import EfficientDet
-from easy_efficientdet.quantization import OptimzationType
+from easy_efficientdet.quantization import ExportModel, OptimzationType, quantize
 from easy_efficientdet.utils import DataSplit, setup_default_logger
 
 logger = setup_default_logger("efficientdet-factory")
@@ -165,21 +167,70 @@ class EfficientDetFactory:
 
         return (optimizer, loss)
 
+    def get_anchor_boxes(self, ):
+        return generate_anchor_boxes(**self.config.get_anchor_box_config())
+
+    # TODO fix generator type annotation
+    # -> input is callable which takes no params and returns generator
     def optimize_model(
+        self,
         model: tf.keras.Model,
         filename: str,
-        opt_type: OptimzationType = OptimzationType.INT8,
+        score_thresh: float = .01,
+        iou_thresh: float = .5,
+        max_detections: int = 100,
+        image_shape: Sequence[int] = None,
+        opt_type: OptimzationType = OptimzationType.FLOAT32,
         representative_dataset: Optional[Union[DataSplit, Generator[tf.Tensor, None,
                                                                     None]]] = None,
     ) -> bytes:
+
+        if "decode" in model.layers[-1].name.lower():
+            logger.warning("provide an object detection model without final "
+                           "detection layer for NMS because this method "
+                           "provides its own tflite compatible NMS implementation")
+
+        if image_shape is None:
+            image_shape = self.config.image_shape
+            logger.info(f"Using image_shape {image_shape} from config")
+
+        anchors = self.get_anchor_boxes()
+        # normalize anchors
+        anchors = anchors / [*self.config.image_shape[:2], *self.config.image_shape[:2]]
+        export_model = ExportModel(self.config.num_cls, iou_thresh, score_thresh,
+                                   max_detections, model, anchors)
 
         if opt_type not in OptimzationType:
             raise ValueError(f"opt_type {opt_type} is not. "
                              f"Should be in {OptimzationType.valid_types()}")
 
-        if isinstance(representative_dataset, str):
-            if representative_dataset in (DataSplit.TRAIN, DataSplit.VALIDATION):
-                raise ValueError("ony supports train or val datasets")
+        quant_data = None
+        if opt_type == OptimzationType.INT8:
+            if isinstance(representative_dataset, str):
+                if representative_dataset not in \
+                        (DataSplit.TRAIN, DataSplit.VALIDATION):
+                    raise ValueError("ony supports train or val datasets")
+
+                data = self.init_data(representative_dataset,
+                                      auto_train_data_size=False)
+                data = data.unbatch()
+
+                def representative_dataset_gen():
+                    for sample in data:
+                        yield [sample[0]]
+
+                quant_data = representative_dataset_gen
+            elif isgeneratorfunction(representative_dataset):
+                quant_data = representative_dataset
+            else:
+                raise ValueError("For optimzation type INT8 a representative_dataset "
+                                 "has to be provided which is either a dataset "
+                                 "from config (train/val) or a generator function "
+                                 "for a dataset")
+
+        logger.info(f"starting quantization of type {opt_type}")
+
+        return quantize(export_model, opt_type, image_shape, quant_data, filename)
 
     @staticmethod
     def build_inference_model(

@@ -75,6 +75,9 @@ class ObjectDetectionConfig:
     val_data_size: Optional[int]
     tfrecord_suffix: str
 
+    # inference parameters
+    # TODO add inference parameters here
+
     def _update_train_data_size(self, train_data_size: int) -> None:
         if (train_data_size is not None) \
                 and (train_data_size != tf.data.UNKNOWN_CARDINALITY):
@@ -139,6 +142,16 @@ class ObjectDetectionConfig:
             "image_preprocessor": self.image_preprocessor,
             "match_iou": self.match_iou,
             "ignore_iou": self.ignore_iou,
+        }
+
+    def get_anchor_box_config(self) -> Dict[str, Any]:
+        return {
+            "image_shape": self.image_shape,
+            "intermediate_scales": self.intermediate_scales,
+            "aspect_ratios": self.aspect_ratios,
+            "stride_anchor_size_ratio": self.stride_anchor_size_ratio,
+            "min_level": self.min_level,
+            "max_level": self.max_level,
         }
 
     def save(self, file_path: Optional[str] = None) -> None:

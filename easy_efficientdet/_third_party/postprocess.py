@@ -26,7 +26,7 @@ TFLITE_USE_REGULAR_NMS = False
 def tflite_nms_implements_signature(num_classes: int,
                                     iou_thresh: float = .5,
                                     score_thresh: float = float("-inf"),
-                                    max_detections=100):
+                                    max_detections: int = 100):
     """`experimental_implements` signature for TFLite's custom NMS op.
     This signature encodes the arguments to correctly initialize TFLite's custom
     post-processing op in the MLIR converter.

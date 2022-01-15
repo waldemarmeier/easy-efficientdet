@@ -46,6 +46,12 @@ FEATURE_MAP = {
 }
 
 
+def infer_cardinality(data: tf.data.Dataset) -> tf.data.Dataset:
+    cardinality = get_tfds_size(data)
+    set_cardinality = tf.data.experimental.assert_cardinality(cardinality)
+    return data.apply(set_cardinality)
+
+
 def init_data(
     config: ObjectDetectionConfig,
     data_split: Union[DataSplit, str] = DataSplit.TRAIN,
@@ -64,20 +70,14 @@ def init_data(
         return default_training_preprocessig(data, config)
     elif data_split == DataSplit.VALIDATION:
         data = load_tfrecords(config.val_data_path, config.tfrecord_suffix)
-        return default_validation_preprocessing(data, config)
+        return default_val_preprocessing(data, config)
     elif data_split == DataSplit.TRAIN_VAL:
         data_train = load_tfrecords(config.train_data_path, config.tfrecord_suffix)
         if auto_train_data_size:
             data_train = data_train.apply(infer_cardinality)
         data_test = load_tfrecords(config.val_data_path, config.tfrecord_suffix)
         return (default_training_preprocessig(data_train, config),
-                default_validation_preprocessing(data_test, config))
-
-
-def infer_cardinality(data: tf.data.Dataset):
-    cardinality = get_tfds_size(data)
-    set_cardinality = tf.data.experimental.assert_cardinality(cardinality)
-    return data.apply(set_cardinality)
+                default_val_preprocessing(data_test, config))
 
 
 def parse_od_record(raw_example: tf.Tensor) -> Dict[str, Union[str, tf.Tensor]]:
@@ -140,12 +140,12 @@ def load_tfrecords(path: str, tfrecord_suffix: str = "tfrecord") -> tf.data.Data
                files))
     logger.info("Using {num} tfrecords".format(num=len(tfrecord_files)))
 
-    display_files_amnt = 5
-    log_files_text = "Creating tf-dataset from following tfrecord-files:\n{}".format(
-        ", ".join(tfrecord_files[:display_files_amnt]))
-    if len(tfrecord_files) > display_files_amnt:
+    display_files_num = 5
+    log_files_text = "Creating tf-dataset from following tfrecord-files: {}".format(
+        ", ".join(tfrecord_files[:display_files_num]))
+    if len(tfrecord_files) > display_files_num:
         log_files_text += \
-            f", and {len(tfrecord_files) - display_files_amnt} more file(s)"
+            f", and {len(tfrecord_files) - display_files_num} more file(s)"
     logger.info(log_files_text)
     # create tfdataset
     dataset = tf.data.TFRecordDataset(tfrecord_files)
@@ -241,8 +241,8 @@ def _val_preprocess_builder(image_shape: Sequence[int]):
     return val_preprocess
 
 
-def default_validation_preprocessing(data: tf.data.Dataset,
-                                     config: ObjectDetectionConfig) -> tf.data.Dataset:
+def default_val_preprocessing(data: tf.data.Dataset,
+                              config: ObjectDetectionConfig) -> tf.data.Dataset:
 
     encoder = BoxEncoder(**config.get_encoding_config())
 

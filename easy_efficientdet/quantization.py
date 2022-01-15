@@ -27,7 +27,7 @@ class _OptimzationType:
         return {cls.INT8, cls.FLOAT16, cls.FLOAT32}
 
 
-OptimzationType = _OptimzationType
+OptimzationType = _OptimzationType()
 
 
 class ExportModel(tf.Module):
@@ -59,7 +59,7 @@ class ExportModel(tf.Module):
 def quantize(export_model: tf.Module,
              opt_type: OptimzationType,
              image_shape: Sequence[int],
-             representative_dataset: Generator[tf.Tensor, None, None],
+             representative_dataset: Generator[tf.Tensor, None, None] = None,
              filename: Optional[str] = None) -> bytes:
 
     if opt_type not in OptimzationType:
@@ -67,9 +67,13 @@ def quantize(export_model: tf.Module,
                          "Optimization type must be in "
                          f"{OptimzationType.valid_types()}")
 
+    if (opt_type == OptimzationType.INT8) and (representative_dataset is None):
+        raise ValueError("For INT8 quantization type a respresentative dataset "
+                         "has to be provided")
+    tmp_prefix = "opt_" + opt_type
     tmp_suffix = datetime.now().strftime("%Y%m%d%H%M%S")
 
-    with tempfile.TemporaryDirectory(prefix=opt_type, suffix=tmp_suffix) as tmpf:
+    with tempfile.TemporaryDirectory(prefix=tmp_prefix, suffix=tmp_suffix) as tmpf:
 
         input_spec = tf.TensorSpec(shape=[1, *image_shape],
                                    dtype=tf.float32,

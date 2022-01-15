@@ -71,7 +71,7 @@ class DecodePredictionsSoft(tf.keras.layers.Layer):
         self.max_detections_per_class = max_detections_per_class
         self.max_detections = max_detections
         self.sigma = sigma
-
+        # TODO generate_anchor_boxes must be better configurable
         self._anchor_box = generate_anchor_boxes(image_shape)
         self.box_variance = box_variance
         self._soft_nms_fun = partial(tf.image.non_max_suppression_with_scores,

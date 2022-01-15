@@ -46,7 +46,7 @@ class DecodePredictions(keras.layers.Layer):
         self.nms_iou_threshold = nms_iou_threshold
         self.max_detections_per_class = max_detections_per_class
         self.max_detections = max_detections
-
+        # TODO generate_anchor_boxes must be better configurable
         self.anchor_boxes = generate_anchor_boxes(image_shape)
         self.box_variance = box_variance
 
