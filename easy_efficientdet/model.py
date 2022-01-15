@@ -45,23 +45,26 @@ def EfficientDet(version: int = 0,
     num_head_layers = NUM_HEAD_LAYERS[version]
     num_bifpn_layers = BIFPN_LAYERS[version]
 
-    kwargs = dict(version=version,
-                  num_cls=num_cls,
-                  num_anchors=num_anchors,
-                  image_shape=image_shape,
-                  backbone_num=backbone_num,
-                  bn_sync=bn_sync,
-                  path_weights=path_weights,
-                  bn_momentum=BN_MOMENTUM,
-                  bn_epsilon=BN_EPSILON,
-                  num_w_bifpn=num_w_bifpn,
-                  num_bifpn_layers=num_bifpn_layers,
-                  num_head_layers=num_head_layers,
-                  fast_fusion_epsilon=FAST_FUSION_EPSILON,
-                  weighted_fusion_type=WEIGHTED_FUSION_TYPE)
+    kwargs = dict(
+        version=version,
+        num_cls=num_cls,
+        num_anchors=num_anchors,
+        image_shape=image_shape,
+        backbone_num=backbone_num,
+        bn_sync=bn_sync,
+        path_weights=path_weights,
+        bn_momentum=BN_MOMENTUM,
+        bn_epsilon=BN_EPSILON,
+        num_w_bifpn=num_w_bifpn,
+        num_bifpn_layers=num_bifpn_layers,
+        num_head_layers=num_head_layers,
+    )
+    #   fast_fusion_epsilon=FAST_FUSION_EPSILON,
+    #   weighted_fusion_type=WEIGHTED_FUSION_TYPE)
 
     if multi_gpu:
-        with tf.distribute.MirroredStrategy():
+        with tf.distribute.MirroredStrategy().scope():
+            logger.info("using mirrored strategy for mutli GPU training")
             model = effdet_functional(**kwargs)
         return model
     else:
@@ -71,10 +74,10 @@ def EfficientDet(version: int = 0,
 def effdet_functional(version: int, num_cls: int, num_anchors: int,
                       image_shape: Sequence[int], backbone_num: int, bn_sync: bool,
                       bn_momentum: float, bn_epsilon: float, num_w_bifpn: int,
-                      num_bifpn_layers: int, num_head_layers: int,
-                      fast_fusion_epsilon: float, weighted_fusion_type: str,
-                      path_weights: str):
+                      num_bifpn_layers: int, num_head_layers: int, path_weights: str):
 
+    # selection of feature fusion type is currently not supported
+    # fast_fusion_epsilon: float, weighted_fusion_type: str,
     efficientnet = _create_backbone(backbone_num, image_shape, bn_sync)
     fpn_input_layers = _extract_layers(efficientnet)
     # just take the last 3
@@ -161,7 +164,12 @@ def _extract_layers(eff_net):
             relevant_layers.append(layers[i].output)
 
     # get last activation layer
-    relevant_layers.append(eff_net.get_layer("top_activation").output)
+    # relevant_layers.append(eff_net.get_layer("top_activation").output)
+
+    pattern = re.compile('block7[a-z]+_project_bn')
+    last_layers = [*filter(lambda l: pattern.match(l.name), eff_net.layers)]
+    last_layer = sorted(last_layers, reverse=True, key=lambda x: x.name)[0]
+    relevant_layers.append(last_layer.output)
 
     logger.info("extracted following layers: {}".format(", ".join(
         map(lambda l: l.name, relevant_layers))))

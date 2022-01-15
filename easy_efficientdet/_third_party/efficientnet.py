@@ -248,9 +248,7 @@ def EfficientNet(width_coefficient,
                                            BASE_WEIGHTS_PATH + file_name,
                                            cache_subdir='models',
                                            file_hash=file_hash)
-        res = model.load_weights(weights_path)
-        print(dir(res))
-        print(res)
+        model.load_weights(weights_path)
     elif weights is not None:
         model.load_weights(weights)
     return model

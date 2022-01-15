@@ -1,4 +1,5 @@
-from typing import Optional, Sequence, Tuple, Union
+import traceback
+from typing import Generator, Optional, Sequence, Tuple, Union
 
 import tensorflow as tf
 
@@ -8,28 +9,83 @@ from easy_efficientdet.data.preprocessing import init_data
 from easy_efficientdet.inference import build_inference_model
 from easy_efficientdet.losses import ObjectDetectionLoss
 from easy_efficientdet.model import EfficientDet
+from easy_efficientdet.quantization import OptimzationType
 from easy_efficientdet.utils import DataSplit, setup_default_logger
 
 logger = setup_default_logger("efficientdet-factory")
 
+# config = DefaultConfig(...)
+# factory = EfficientDetFacotry(config)
 
-class OptType:
+# model = factory.build_model(...)
 
-    INT8 = "int8"
-    FLOAT16 = "float16"
-    FLOAT32 = "float32"
+# ...
+# ...
 
-    @classmethod
-    def is_valid(cls, other: str) -> bool:
-        return other in {cls.INT8, cls.FLOAT16, cls.FLOAT32}
+# model.fit(data_train, data_val, ...)
+
+# inf_model = build_inference_model(model)
+
+# path_saved_model = './my_saved_model'
+
+# model_tflite_bytes = \
+# factory.optimze(
+#     model, # without non max suppression, check it in code
+#     filename:str,
+#     type=["int8", "float32", "float16"],
+#     rep_dataset= None / "val" , "train", generator
+#     tmp_saved_model_dir = "tmp_saved_model_tflite_conversion",
+# )
 
 
 class EfficientDetFactory:
     def __init__(self, config: ObjectDetectionConfig):
         self.config = config
+        self._dist_strategy = None
+
+    def reset_dist_strategy(self, ) -> None:
+        self._dist_strategy = None
+
+    @property
+    def dist_strategy(self, ) -> tf.distribute.MirroredStrategy:
+        logger.info("using mirrored strategy for mutli GPU training")
+        if self._dist_strategy is None:
+            self._dist_strategy = tf.distribute.MirroredStrategy()
+            logger.info(f"created new mirrored strategy scope {self._dist_strategy}")
+        else:
+            logger.info("using existing mirrored strategy scope "
+                        f"{self._dist_strategy}")
+        return self._dist_strategy
 
     def build_model(self) -> tf.keras.Model:
-        return EfficientDet(**self.config.get_model_config())
+
+        if self.config.multi_gpu:
+            with self.dist_strategy.scope():
+                return EfficientDet(**self.config.get_model_config())
+        else:
+            return EfficientDet(**self.config.get_model_config())
+
+    def restore_from_checkpoint(self,
+                                model: tf.keras.Model,
+                                checkpoint_dir: str,
+                                mult_checkpoints_dir: bool = True) -> None:
+
+        if mult_checkpoints_dir:
+            path_latest_chpkt = tf.train.latest_checkpoint(checkpoint_dir)
+        else:
+            path_latest_chpkt = checkpoint_dir
+
+        logger.info(f"using checkpoint with path {path_latest_chpkt}")
+
+        with self.dist_strategy.scope():
+            checkpoint = tf.train.Checkpoint(model)
+            try:
+                checkpoint.restore(path_latest_chpkt).assert_consumed()
+            except AssertionError:
+                logger.warning("an error occurred during restore of checkpoint "
+                               f"{path_latest_chpkt}. Usually, issues with "
+                               "'save_counter' variable can be ignored.")
+                logger.warning(traceback.format_exc())
 
     def init_data(
         self,
@@ -86,9 +142,15 @@ class EfficientDetFactory:
             learning_rate = CosineLrSchedule.get_effdet_lr_scheduler(
                 self.config.train_data_size, self.config.batch_size, self.config.epochs)
 
-        optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate,
-                                            momentum=self.config.momentum,
-                                            decay=self.config.weight_decay)
+        if self.config.multi_gpu:
+            with self.dist_strategy.scope():
+                optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate,
+                                                    momentum=self.config.momentum,
+                                                    decay=self.config.weight_decay)
+        else:
+            optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate,
+                                                momentum=self.config.momentum,
+                                                decay=self.config.weight_decay)
         loss = ObjectDetectionLoss(**self.config.get_loss_config())
 
         return (optimizer, loss)
@@ -96,14 +158,18 @@ class EfficientDetFactory:
     def optimize_model(
         model: tf.keras.Model,
         filename: str,
-        type: OptType,
-        representative_dataset: Optional[Union[DataSplit, str]] = None,
-        tmp_saved_model_dir="tmp_saved_model_tflite_conversion",
+        opt_type: OptimzationType = OptimzationType.INT8,
+        representative_dataset: Optional[Union[DataSplit, Generator[tf.Tensor, None,
+                                                                    None]]] = None,
     ) -> bytes:
 
-        if filename not in OptType.is_valid():
-            ...
-        ...
+        if opt_type not in OptimzationType:
+            raise ValueError(f"opt_type {opt_type} is not. "
+                             f"Should be in {OptimzationType.valid_types()}")
+
+        if isinstance(representative_dataset, str):
+            if representative_dataset in (DataSplit.TRAIN, DataSplit.VALIDATION):
+                raise ValueError("ony supports train or val datasets")
 
     @staticmethod
     def build_inference_model(
