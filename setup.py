@@ -1,10 +1,7 @@
 from setuptools import find_packages, setup
 
 requirements = {
-    "default": ["tensorflow>=2.3.0", "matplotlib>=2.2.5"],
-    "extra": {
-        "eval": ["pycocotools>=2.0.2"]
-    }
+    "default": ["tensorflow>=2.4.4", "matplotlib>=2.2.5", "pycocotools>=2.0.2"],
 }
 
 
