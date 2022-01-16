@@ -1,13 +1,13 @@
 import traceback
 from inspect import isgeneratorfunction
-from typing import Generator, Optional, Sequence, Tuple, Union
+from typing import Callable, Generator, Optional, Sequence, Tuple, Union
 
 import tensorflow as tf
 
 from easy_efficientdet._third_party.training import CosineLrSchedule
 from easy_efficientdet.anchors import generate_anchor_boxes
 from easy_efficientdet.config import ObjectDetectionConfig
-from easy_efficientdet.data.preprocessing import init_data
+from easy_efficientdet.data.preprocessing import create_image_generator, init_data
 from easy_efficientdet.inference import build_inference_model
 from easy_efficientdet.losses import ObjectDetectionLoss
 from easy_efficientdet.model import EfficientDet
@@ -99,6 +99,7 @@ class EfficientDetFactory:
                            f"{checkpoint_path}. Usually, issues with "
                            "'save_counter' variable can be ignored.")
 
+    # TODO rename to create_...
     def init_data(
         self,
         data_split: Union[DataSplit, str],
@@ -170,20 +171,18 @@ class EfficientDetFactory:
     def get_anchor_boxes(self, ):
         return generate_anchor_boxes(**self.config.get_anchor_box_config())
 
-    # TODO fix generator type annotation
-    # -> input is callable which takes no params and returns generator
-    def optimize_model(
-        self,
-        model: tf.keras.Model,
-        filename: str,
-        score_thresh: float = .01,
-        iou_thresh: float = .5,
-        max_detections: int = 100,
-        image_shape: Sequence[int] = None,
-        opt_type: OptimzationType = OptimzationType.FLOAT32,
-        representative_dataset: Optional[Union[DataSplit, Generator[tf.Tensor, None,
-                                                                    None]]] = None,
-    ) -> bytes:
+    # TODO generator callable is used in several places, make it reusable
+    def optimize_model(self,
+                       model: tf.keras.Model,
+                       filename: str,
+                       score_thresh: float = .01,
+                       iou_thresh: float = .5,
+                       max_detections: int = 100,
+                       image_shape: Sequence[int] = None,
+                       opt_type: OptimzationType = OptimzationType.FLOAT32,
+                       representative_dataset: Optional[Union[DataSplit, Callable[
+                           [], Generator[tf.Tensor, None, None]]]] = None,
+                       size_limit: Optional[int] = None) -> bytes:
 
         if "decode" in model.layers[-1].name.lower():
             logger.warning("provide an object detection model without final "
@@ -211,19 +210,19 @@ class EfficientDetFactory:
                         (DataSplit.TRAIN, DataSplit.VALIDATION):
                     raise ValueError("ony supports train or val datasets")
 
-                data = self.init_data(representative_dataset,
-                                      auto_train_data_size=False)
-                data = data.unbatch()
+                if representative_dataset == DataSplit.TRAIN:
+                    data_path = self.config.train_data_path
+                elif representative_dataset == DataSplit.VALIDATION:
+                    data_path = self.config.val_data_path
 
-                def representative_dataset_gen():
-                    for sample in data:
-                        yield [sample[0]]
+                quant_data = create_image_generator(data_path, image_shape[:2],
+                                                    self.config.tfrecord_suffix,
+                                                    size_limit)
 
-                quant_data = representative_dataset_gen
             elif isgeneratorfunction(representative_dataset):
                 quant_data = representative_dataset
             else:
-                raise ValueError("For optimzation type INT8 a representative_dataset "
+                raise ValueError("For optimzation type int8 a representative_dataset "
                                  "has to be provided which is either a dataset "
                                  "from config (train/val) or a generator function "
                                  "for a dataset")

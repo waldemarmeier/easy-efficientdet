@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Dict, Sequence, Union
+from email.generator import Generator
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Union
 
 import tensorflow as tf
 
@@ -52,6 +53,7 @@ def infer_cardinality(data: tf.data.Dataset) -> tf.data.Dataset:
     return data.apply(set_cardinality)
 
 
+# TODO rename to create_data
 def init_data(
     config: ObjectDetectionConfig,
     data_split: Union[DataSplit, str] = DataSplit.TRAIN,
@@ -260,3 +262,28 @@ def default_val_preprocessing(data: tf.data.Dataset,
     data = data.prefetch(TFDATA_AUTOTUNE)
 
     return data
+
+
+def create_image_generator(
+    path: str,
+    image_shape: Sequence[int],
+    tfrecord_suffix: str = "tfrecord",
+    size: Optional[int] = None,
+) -> Callable[[], Generator[tf.Tensor, None, None]]:
+
+    # encoder = BoxEncoder(**config.get_encoding_config())
+    data = load_tfrecords(path, tfrecord_suffix)
+    data = data.map(parse_od_record, TFDATA_AUTOTUNE)
+    data = data.map(lambda x: x["image"], TFDATA_AUTOTUNE)
+    data = data.map(lambda x: tf.image.resize(x, image_shape), TFDATA_AUTOTUNE)
+    if size is not None:
+        data = data.shuffle(256, seed=123)
+        data = data.take(size)
+    data = data.batch(1)
+    data = data.prefetch(TFDATA_AUTOTUNE)
+
+    def data_gen():
+        for sample in data:
+            yield [sample]
+
+    return data_gen
