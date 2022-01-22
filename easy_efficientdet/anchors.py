@@ -3,9 +3,6 @@ from typing import Dict, Sequence, Union
 
 import tensorflow as tf
 
-# @todo: encoder & decoder
-# TODO Should contain anchor generation and post processing nms.
-
 
 def _get_featuremap_size(
     image_shape: Sequence[Number],

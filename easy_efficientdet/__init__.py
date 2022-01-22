@@ -1,6 +1,6 @@
 from easy_efficientdet import visualization
 from easy_efficientdet.config import DefaultConfig
-from easy_efficientdet.data.preprocessing import init_data
+from easy_efficientdet.data.preprocessing import build_data_pipeline
 from easy_efficientdet.factory import EfficientDetFactory
 from easy_efficientdet.losses import ObjectDetectionLoss
 from easy_efficientdet.model import EfficientDet

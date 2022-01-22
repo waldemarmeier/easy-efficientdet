@@ -57,11 +57,10 @@ def infer_cardinality(data: tf.data.Dataset) -> tf.data.Dataset:
     return data.apply(set_cardinality)
 
 
-# TODO rename to create_data
-def init_data(
+def build_data_pipeline(
     config: ObjectDetectionConfig,
     data_split: Union[DataSplit, str] = DataSplit.TRAIN,
-    auto_train_data_size: bool = False
+    auto_train_data_size: bool = False,
 ) -> Union[tf.data.Dataset, Sequence[tf.data.Dataset]]:
 
     # TODO make data type an enum

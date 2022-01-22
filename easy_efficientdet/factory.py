@@ -7,7 +7,10 @@ import tensorflow as tf
 from easy_efficientdet._third_party.training import CosineLrSchedule
 from easy_efficientdet.anchors import generate_anchor_boxes
 from easy_efficientdet.config import ObjectDetectionConfig
-from easy_efficientdet.data.preprocessing import create_image_generator, init_data
+from easy_efficientdet.data.preprocessing import (
+    build_data_pipeline,
+    create_image_generator,
+)
 from easy_efficientdet.inference import build_inference_model
 from easy_efficientdet.losses import ObjectDetectionLoss
 from easy_efficientdet.model import EfficientDet
@@ -82,7 +85,7 @@ class EfficientDetFactory:
                            f"{checkpoint_path}. Usually, issues with "
                            "'save_counter' variable can be ignored.")
 
-    def create_data(
+    def build_data_pipeline(
         self,
         data_split: Union[DataSplit, str],
         auto_train_data_size: bool = True,
@@ -97,8 +100,8 @@ class EfficientDetFactory:
 
             if self.config.train_data_path is not None \
                     and self.config.val_data_path is not None:
-                train_data, val_data = init_data(self.config, data_split,
-                                                 auto_train_data_size)
+                train_data, val_data = build_data_pipeline(self.config, data_split,
+                                                           auto_train_data_size)
             else:
                 raise ValueError(f"For data split {data_split} 'train_data_path' and "
                                  "'val_data_path' properties have to be set")
@@ -112,14 +115,14 @@ class EfficientDetFactory:
 
         elif data_split == DataSplit.TRAIN:
 
-            train_data = init_data(self.config, DataSplit.TRAIN)
+            train_data = build_data_pipeline(self.config, DataSplit.TRAIN)
             if auto_train_data_size:
                 _cardinality_num = \
                     train_data.cardinality().numpy() * self.config.batch_size
                 self.config._update_train_data_size(_cardinality_num)
             return train_data
         elif data_split == DataSplit.VALIDATION:
-            return init_data(self.config, DataSplit.VALIDATION)
+            return build_data_pipeline(self.config, DataSplit.VALIDATION)
         elif data_split == DataSplit.TEST:
             raise NotImplementedError("test data split is not implemented")
 
@@ -148,7 +151,7 @@ class EfficientDetFactory:
 
         return optimizer
 
-    def create_loss(self, ) -> tf.keras.losses.Loss:
+    def create_loss_fn(self, ) -> tf.keras.losses.Loss:
         return ObjectDetectionLoss(**self.config.get_loss_config())
 
     def create_anchor_boxes(self, ):
