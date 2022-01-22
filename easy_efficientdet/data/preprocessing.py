@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import os
-from email.generator import Generator
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union
 
 import tensorflow as tf
 
 from easy_efficientdet.boxencoding import BoxEncoder
 from easy_efficientdet.data.augmentation import augment_data_builder
-from easy_efficientdet.utils import DataSplit, get_tfds_size, setup_default_logger
+from easy_efficientdet.utils import (
+    DataSplit,
+    ImageDataGenertor,
+    get_tfds_size,
+    setup_default_logger,
+)
 
 if TYPE_CHECKING:
     from easy_efficientdet.config import ObjectDetectionConfig
@@ -269,7 +273,7 @@ def create_image_generator(
     image_shape: Sequence[int],
     tfrecord_suffix: str = "tfrecord",
     size: Optional[int] = None,
-) -> Callable[[], Generator[tf.Tensor, None, None]]:
+) -> ImageDataGenertor:
 
     # encoder = BoxEncoder(**config.get_encoding_config())
     data = load_tfrecords(path, tfrecord_suffix)

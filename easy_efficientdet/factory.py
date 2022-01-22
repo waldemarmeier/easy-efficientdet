@@ -1,6 +1,6 @@
 import traceback
 from inspect import isgeneratorfunction
-from typing import Callable, Generator, Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 import tensorflow as tf
 
@@ -12,32 +12,9 @@ from easy_efficientdet.inference import build_inference_model
 from easy_efficientdet.losses import ObjectDetectionLoss
 from easy_efficientdet.model import EfficientDet
 from easy_efficientdet.quantization import ExportModel, OptimzationType, quantize
-from easy_efficientdet.utils import DataSplit, setup_default_logger
+from easy_efficientdet.utils import DataSplit, ImageDataGenertor, setup_default_logger
 
 logger = setup_default_logger("efficientdet-factory")
-
-# config = DefaultConfig(...)
-# factory = EfficientDetFacotry(config)
-
-# model = factory.build_model(...)
-
-# ...
-# ...
-
-# model.fit(data_train, data_val, ...)
-
-# inf_model = build_inference_model(model)
-
-# path_saved_model = './my_saved_model'
-
-# model_tflite_bytes = \
-# factory.optimze(
-#     model, # without non max suppression, check it in code
-#     filename:str,
-#     type=["int8", "float32", "float16"],
-#     rep_dataset= None / "val" , "train", generator
-#     tmp_saved_model_dir = "tmp_saved_model_tflite_conversion",
-# )
 
 
 class EfficientDetFactory:
@@ -67,10 +44,12 @@ class EfficientDetFactory:
         else:
             return EfficientDet(**self.config.get_model_config())
 
-    def restore_from_checkpoint(self,
-                                model: tf.keras.Model,
-                                checkpoint_dir: str,
-                                mult_checkpoints_dir: bool = True) -> None:
+    def restore_from_checkpoint(
+        self,
+        model: tf.keras.Model,
+        checkpoint_dir: str,
+        mult_checkpoints_dir: bool = True,
+    ) -> None:
 
         if mult_checkpoints_dir:
             path_latest_chpkt = tf.train.latest_checkpoint(checkpoint_dir)
@@ -89,7 +68,11 @@ class EfficientDetFactory:
         else:
             self._restore_checkpoint(model, path_latest_chpkt)
 
-    def _restore_checkpoint(self, model: tf.keras.Model, checkpoint_path: str) -> None:
+    def _restore_checkpoint(
+        self,
+        model: tf.keras.Model,
+        checkpoint_path: str,
+    ) -> None:
         checkpoint = tf.train.Checkpoint(model)
         try:
             checkpoint.restore(checkpoint_path).assert_consumed()
@@ -99,11 +82,10 @@ class EfficientDetFactory:
                            f"{checkpoint_path}. Usually, issues with "
                            "'save_counter' variable can be ignored.")
 
-    # TODO rename to create_...
-    def init_data(
+    def create_data(
         self,
         data_split: Union[DataSplit, str],
-        auto_train_data_size: bool = True
+        auto_train_data_size: bool = True,
     ) -> Union[tf.data.Dataset, Tuple[tf.data.Dataset]]:
 
         if data_split in (DataSplit.TRAIN, DataSplit.TRAIN_VAL):
@@ -141,8 +123,7 @@ class EfficientDetFactory:
         elif data_split == DataSplit.TEST:
             raise NotImplementedError("test data split is not implemented")
 
-    def init_training(
-            self) -> Tuple[tf.keras.optimizers.Optimizer, tf.keras.losses.Loss]:
+    def create_optimizer(self, ) -> tf.keras.optimizers.Optimizer:
 
         if isinstance(self.config.learning_rate, float):
             logger.warning("Setting learning rate to a constant value is not "
@@ -164,25 +145,27 @@ class EfficientDetFactory:
             optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate,
                                                 momentum=self.config.momentum,
                                                 decay=self.config.weight_decay)
-        loss = ObjectDetectionLoss(**self.config.get_loss_config())
 
-        return (optimizer, loss)
+        return optimizer
 
-    def get_anchor_boxes(self, ):
+    def create_loss(self, ) -> tf.keras.losses.Loss:
+        return ObjectDetectionLoss(**self.config.get_loss_config())
+
+    def create_anchor_boxes(self, ):
         return generate_anchor_boxes(**self.config.get_anchor_box_config())
 
-    # TODO generator callable is used in several places, make it reusable
-    def optimize_model(self,
-                       model: tf.keras.Model,
-                       filename: str,
-                       score_thresh: float = .01,
-                       iou_thresh: float = .5,
-                       max_detections: int = 100,
-                       image_shape: Sequence[int] = None,
-                       opt_type: OptimzationType = OptimzationType.FLOAT32,
-                       representative_dataset: Optional[Union[DataSplit, Callable[
-                           [], Generator[tf.Tensor, None, None]]]] = None,
-                       size_limit: Optional[int] = None) -> bytes:
+    def quantize_model(
+        self,
+        model: tf.keras.Model,
+        filename: str,
+        score_thresh: float = .01,
+        iou_thresh: float = .5,
+        max_detections: int = 100,
+        image_shape: Sequence[int] = None,
+        opt_type: OptimzationType = OptimzationType.FLOAT32,
+        representative_dataset: Optional[Union[DataSplit, ImageDataGenertor]] = None,
+        size_limit: Optional[int] = None,
+    ) -> bytes:
 
         if "decode" in model.layers[-1].name.lower():
             logger.warning("provide an object detection model without final "
@@ -193,7 +176,7 @@ class EfficientDetFactory:
             image_shape = self.config.image_shape
             logger.info(f"Using image_shape {image_shape} from config")
 
-        anchors = self.get_anchor_boxes()
+        anchors = self.create_anchor_boxes()
         # normalize anchors
         anchors = anchors / [*self.config.image_shape[:2], *self.config.image_shape[:2]]
         export_model = ExportModel(self.config.num_cls, iou_thresh, score_thresh,

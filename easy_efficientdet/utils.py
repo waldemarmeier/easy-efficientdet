@@ -1,13 +1,14 @@
 import logging
 import os
 from numbers import Number
-from typing import Dict, List, Optional, Sequence, Set, Union
+from typing import Callable, Dict, Generator, List, Optional, Sequence, Set, Union
 
 import tensorflow as tf
 
 from easy_efficientdet._third_party.logging import get_logger
 
 LabelMapType = List[Dict[str, Union[str, int]]]
+ImageDataGenertor = Callable[[], Generator[tf.Tensor, None, None]]
 
 
 def setup_default_logger(name: str) -> logging.Logger:
