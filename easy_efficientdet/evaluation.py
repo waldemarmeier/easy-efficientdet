@@ -294,14 +294,15 @@ class DetectionResult:
 
 
 def parse_combined_nms_obj(cnms_objs, i=0) -> DetectionResult:
-    # print(cnms_objs)
-    num_detections = cnms_objs.valid_detections[i].numpy()
-    # print("num detections", num_detections)
-    boxes = cnms_objs.nmsed_boxes[i][:num_detections, :].numpy()
 
-    scores = cnms_objs.nmsed_scores[i, :num_detections].numpy()
+    cnms_objs = list(map(lambda x: x.numpy(), cnms_objs))
+    nmsed_boxes, nmsed_scores, nmsed_classes, valid_detections = cnms_objs
 
-    labels = cnms_objs.nmsed_classes[i, :num_detections].numpy()
+    num_detections = valid_detections[i]
+    boxes = nmsed_boxes[i][:num_detections, :]
+    scores = nmsed_scores[i, :num_detections]
+
+    labels = nmsed_classes[i, :num_detections]
     labels = labels.astype(np.int32)
 
     return DetectionResult(detection_boxes=boxes,

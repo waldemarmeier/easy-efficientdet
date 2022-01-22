@@ -25,7 +25,8 @@ def build_inference_model(
                                 confidence_threshold=confidence_threshold,
                                 nms_iou_threshold=nms_iou_threshold,
                                 max_detections_per_class=max_detections_per_class,
-                                max_detections=max_detections)
+                                max_detections=max_detections,
+                                box_variance=box_variance)
 
     if resize:
         inp = x = tf.keras.Input((None, None, image_shape[2]))
@@ -253,14 +254,9 @@ class DecodePredictionsSoft(tf.keras.layers.Layer):
                 cls_pred_nms_cls = tf.gather(cls_pred_nms_cls, best_scores_idx)
                 cls_pred_nms = cls_pred_nms.write(batch_num, cls_pred_nms_cls)
 
-        # nms_results = AdapterNMSResult(valid_detections = num_detections.stack(),
-        #                                 nmsed_boxes = box_pred_nms.stack(),
-        #                                 nmsed_scores = scores_pred_nms.stack(),
-        #                                 nmsed_classes = cls_pred_nms.stack())
-
-        return {
-            'valid_detections': num_detections.stack(),
-            'nmsed_boxes': box_pred_nms.stack(),
-            'nmsed_scores': scores_pred_nms.stack(),
-            "nmsed_classes": cls_pred_nms.stack()
-        }
+        return (
+            box_pred_nms.stack(),
+            scores_pred_nms.stack(),
+            cls_pred_nms.stack(),
+            num_detections.stack(),
+        )
