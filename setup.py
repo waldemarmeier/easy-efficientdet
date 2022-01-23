@@ -21,7 +21,6 @@ setup(
     license='Apache 2.0',
     python_requires='>=3.7',
     install_requires=requirements["default"],
-    extras_require=requirements["extra"],
     description="Easy to use object detection package based on tensorflow",
     long_description=load_readme(),
     entry_points={
