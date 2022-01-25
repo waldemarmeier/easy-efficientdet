@@ -14,6 +14,7 @@ This project originated out of my master thesis which I wrote in coorporation wi
 - dataset preprocessing for COCO and PASCAL/VOC formats to TF-records for optimal training
 - data augmentation
 - set up of training routine inlcuding optimizer and learning rate schedule
+- multi-gpu training
 - reasonable default parameters for training and many hints
 - quantization api for production tf-lite models
 
