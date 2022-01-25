@@ -290,3 +290,13 @@ def create_image_generator(
             yield [sample]
 
     return data_gen
+
+
+def build_data_eval(
+    path: str,
+    tfrecord_suffix: str = "tfrecord",
+) -> tf.data.Dataset:
+
+    data = load_tfrecords(path, tfrecord_suffix=tfrecord_suffix)
+    data = data.map(parse_od_record, TFDATA_AUTOTUNE)
+    return data

@@ -42,6 +42,14 @@ class DataSplit:
         return set(cls.TRAIN, cls.VALIDATION, cls.TRAIN_VAL, cls.TRAIN)
 
 
+class ImageShape:
+    def __init__(self, shape: Sequence[int]):
+        if len(shape) != 3:
+            ...
+            # throw big exception
+        self.shape = shape
+
+
 def convert_to_centroids(boxes):
     """Changes the box format to center, width and height.
 

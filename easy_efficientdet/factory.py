@@ -1,3 +1,4 @@
+import json
 import traceback
 from inspect import isgeneratorfunction
 from typing import Optional, Sequence, Tuple, Union
@@ -8,14 +9,22 @@ from easy_efficientdet._third_party.training import CosineLrSchedule
 from easy_efficientdet.anchors import generate_anchor_boxes
 from easy_efficientdet.config import ObjectDetectionConfig
 from easy_efficientdet.data.preprocessing import (
+    TFDATA_AUTOTUNE,
     build_data_pipeline,
     create_image_generator,
+    load_tfrecords,
+    parse_od_record,
 )
 from easy_efficientdet.inference import build_inference_model
 from easy_efficientdet.losses import ObjectDetectionLoss
 from easy_efficientdet.model import EfficientDet
 from easy_efficientdet.quantization import ExportModel, OptimzationType, quantize
-from easy_efficientdet.utils import DataSplit, ImageDataGenertor, setup_default_logger
+from easy_efficientdet.utils import (
+    DataSplit,
+    ImageDataGenertor,
+    LabelMapType,
+    setup_default_logger,
+)
 
 logger = setup_default_logger("efficientdet-factory")
 
@@ -126,6 +135,21 @@ class EfficientDetFactory:
         elif data_split == DataSplit.TEST:
             raise NotImplementedError("test data split is not implemented")
 
+    def build_data_eval(
+        self,
+        path: str = None,
+        tfrecord_suffix: str = None,
+    ) -> tf.data.Dataset:
+
+        if path is None:
+            path = self.config.val_data_path
+        if tfrecord_suffix is None:
+            tfrecord_suffix = self.config.tfrecord_suffix
+
+        data = load_tfrecords(path, tfrecord_suffix)
+        data = data.map(parse_od_record, TFDATA_AUTOTUNE)
+        return data
+
     def create_optimizer(self, ) -> tf.keras.optimizers.Optimizer:
 
         if isinstance(self.config.learning_rate, float):
@@ -156,6 +180,10 @@ class EfficientDetFactory:
 
     def create_anchor_boxes(self, ):
         return generate_anchor_boxes(**self.config.get_anchor_box_config())
+
+    def load_labelmap(path: str) -> LabelMapType:
+        with open(path) as fp:
+            return json.load(fp)
 
     def quantize_model(
         self,
