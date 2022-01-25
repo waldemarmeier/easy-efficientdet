@@ -12,7 +12,7 @@ from easy_efficientdet._third_party.tf_object_detection_api.coco_evaluation \
     import CocoDetectionEvaluator
 from easy_efficientdet._third_party.tf_object_detection_api.object_detection_evaluation\
     import PascalDetectionEvaluator
-from easy_efficientdet.data.preprocessing import parse_od_record
+from easy_efficientdet.data.preprocessing import parse_od_record, TFDATA_AUTOTUNE
 from easy_efficientdet.utils import get_abs_bboxes, setup_default_logger, swap_xy
 # isort: on
 
@@ -31,6 +31,7 @@ def evaluate_od(dataset: tf.data.Dataset,
                 batch_size: int = 1,
                 log_frequency: int = 250):
 
+    image_shape = image_shape[:2]
     sample_counter = 0
 
     # prepare data
@@ -39,7 +40,7 @@ def evaluate_od(dataset: tf.data.Dataset,
 
     # parse data for coco evaluation
     dataset = dataset.map(partial(parse_data_cocoeval, image_shape=image_shape),
-                          tf.data.experimental.AUTOTUNE)
+                          TFDATA_AUTOTUNE)
 
     if remove_sm_bbox_value:
         dataset = dataset.map(
@@ -64,6 +65,8 @@ def evaluate_od(dataset: tf.data.Dataset,
                                             'box_cls_names': b''
                                         })
     batched_data = batched_data.prefetch(tf.data.experimental.AUTOTUNE)
+
+    logger.info("starting evaluation")
 
     for sample_batch in batched_data:
         image_ids = sample_batch["image_id"].numpy().astype('S')
