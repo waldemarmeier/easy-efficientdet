@@ -143,7 +143,11 @@ class EfficientDetFactory:
 
         if path is None:
             path = self.config.val_data_path
+            logger.info(
+                f"using default eval data path from config {self.config.val_data_path}")
         if tfrecord_suffix is None:
+            logger.info("using default tfrecord_suffix from config "
+                        f"{self.config.tfrecord_suffix}")
             tfrecord_suffix = self.config.tfrecord_suffix
 
         data = load_tfrecords(path, tfrecord_suffix)
@@ -181,7 +185,7 @@ class EfficientDetFactory:
     def create_anchor_boxes(self, ):
         return generate_anchor_boxes(**self.config.get_anchor_box_config())
 
-    def load_labelmap(path: str) -> LabelMapType:
+    def load_labelmap(self, path: str) -> LabelMapType:
         with open(path) as fp:
             return json.load(fp)
 
@@ -257,6 +261,8 @@ class EfficientDetFactory:
         box_variance: Optional[Sequence[float]] = None,
         resize: bool = False,
     ) -> tf.keras.Model:
+        # TODO use parameters from config as default values
+        #
         return build_inference_model(model, num_cls, image_shape, confidence_threshold,
                                      nms_iou_threshold, max_detections_per_class,
                                      max_detections, box_variance, resize)
