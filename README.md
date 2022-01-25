@@ -61,7 +61,7 @@ Obviously, this package uses an EfficientDet model implementation for object det
 
 All thid party code that is used in this project is Apache 2.0 licensed and is located in `easy_efficientdet/_third_party/`. Naturally, the respective copyright headers have been kept in place (see beelow for a complete list).
 
-In the meantime, the tensorflow team implemented a similiar package in [tensorflow example](https://github.com/tensorflow/examples). Here, I also took inspiration from it but no code used directly. Fianlly, I used many of the training recommendations of [Ross Wightman](https://github.com/rwightman/efficientdet-pytorch).
+In the meantime, the tensorflow team implemented a similiar package in [tensorflow example](https://github.com/tensorflow/examples). I took inspiration from it as well but no code is used directly. Fianlly, I used many of the training recommendations of [Ross Wightman](https://github.com/rwightman/efficientdet-pytorch).
 
 ### Third party code used in this project
 
