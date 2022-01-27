@@ -55,7 +55,7 @@ model.fit(
 )
 ```
 
-## Aknowledgements
+## Acknowledgements
 
 Obviously, this package uses an EfficientDet model implementation for object detection. This project is based on research by Mingxing Tan, Ruoming Pang and Quoc V. Le [EfficientDet: Scalable and Efficient Object Detection](https://arxiv.org/abs/1911.09070). I tried to replicate their implemenation as closely as possible. Additionally, I looked at the EfficientDet implementation in the [tensorflow object detection api](https://github.com/tensorflow/models/tree/master/research/object_detection) and the [RetinaNet tutorial from keras exampes](https://keras.io/examples/vision/retinanet/).
 
