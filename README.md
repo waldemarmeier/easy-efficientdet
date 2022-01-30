@@ -1,6 +1,7 @@
 # easy-efficientdet
 
 `easy-efficientdet` is an object detection package based on tensorflow which focuses on ease of use.
+Nevertheless, the layered API allows to easily replace the provided abstractions with custom code without having to write much boilerplate code.
 
 Training object detection models can be overwhelming. This package aims to provide a one stop solution for
 preprocessing (custom) labeled data, model training, evaluation and model optimzation for production.
@@ -12,10 +13,10 @@ This project originated out of my master thesis which I wrote in coorporation wi
 ## Features
 
 - dataset preprocessing for COCO and PASCAL/VOC formats to TF-records for optimal training
+- reasonable default parameters for training and many hints for unreasonable settings
 - data augmentation
 - set up of training routine inlcuding optimizer and learning rate schedule
 - multi-gpu training
-- reasonable default parameters for training and many hints
 - quantization api for production tf-lite models
 
 ## Examples
@@ -74,7 +75,9 @@ In the meantime, the tensorflow team implemented a similiar package in [tensorfl
 
 - unit-testing
 - improve documentation
+- partial model training (heads -> bifpn -> backbone)
 - develop faster training schedule which lowers the learning rate automatically based on a heuristic
+- EMA training
 - auto quantization during training / post training
 - auto distillation
 - other data sources (generator, tensorflow datasets, csv)
