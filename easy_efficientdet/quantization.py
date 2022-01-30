@@ -70,8 +70,8 @@ def quantize(export_model: tf.Module,
     if (opt_type == OptimzationType.INT8) and (representative_dataset is None):
         raise ValueError("For INT8 quantization type a respresentative dataset "
                          "has to be provided")
-    tmp_prefix = "opt_" + opt_type
-    tmp_suffix = datetime.now().strftime("%Y%m%d%H%M%S")
+    tmp_prefix = "opt_" + opt_type + "_"
+    tmp_suffix = "_" + datetime.now().strftime("%Y%m%d%H%M%S")
 
     with tempfile.TemporaryDirectory(prefix=tmp_prefix, suffix=tmp_suffix) as tmpf:
 
