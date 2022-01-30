@@ -133,7 +133,11 @@ def evaluate_od_pascal(dataset: tf.data.Dataset,
                        is_data_parsed: bool = False,
                        remove_sm_bbox_value: float = 0,
                        subtract_one_from_cls: bool = True,
-                       batch_size: int = 1):
+                       batch_size: int = 1,
+                       log_frequency: int = 250):
+
+    image_shape = image_shape[:2]
+    sample_counter = 0
 
     # prepare data
     if not is_data_parsed:
@@ -208,6 +212,10 @@ def evaluate_od_pascal(dataset: tf.data.Dataset,
             image_id = image_ids[i]
             evaluator.add_single_detected_image_info(image_id=image_id,
                                                      detections_dict=prediction_dict)
+            sample_counter += 1
+
+            if (log_frequency > 0) and ((sample_counter % log_frequency) == 0):
+                logger.info(f"currently at sample {sample_counter}")
 
     eval_results = evaluator.evaluate()
     return eval_results
