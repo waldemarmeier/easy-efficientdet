@@ -45,9 +45,16 @@ class DataSplit:
 class ImageShape:
     def __init__(self, shape: Sequence[int]):
         if len(shape) != 3:
-            ...
-            # throw big exception
-        self.shape = shape
+            raise ValueError(f"Image shape must have length 3 not {len(shape)}")
+        self._shape = shape
+
+    @property
+    def shape(self, ):
+        # return a copy
+        return [*self._shape]
+
+    def is_bw(self, ):
+        return self._shape[2] == 1
 
 
 def convert_to_centroids(boxes):
