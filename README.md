@@ -8,7 +8,7 @@ preprocessing (custom) labeled data, model training, evaluation and model optimz
 This is accomplished by providing many abstractions over a simple to use API, reasonable default parameters and
 transfer learning which speeds up training and improves model precision.
 
-This project originated out of my master thesis which I wrote in coorporation with Detsche Bahn AG's (German railway company) House of AI. Deutsche Bahn generously allowed me to refactor and publish the code I wrote during my master thesis. If your are interested in working on innovative data and AI projects you might want get in touch them.
+This project originated out of my master thesis which I wrote in coorporation with Detsche Bahn AG's (German railway company) House of AI. Deutsche Bahn generously allowed me to refactor and publish the code I wrote during my master thesis. If your are interested in working on innovative data and AI projects you might want get in touch with them.
 
 ## Features
 
