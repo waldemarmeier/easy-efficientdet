@@ -72,8 +72,8 @@ In the meantime, the tensorflow team implemented a similiar package in [tensorfl
 
 ## Backlog
 
-- unit-testing
-- improve documentation
+- unit-testing **in progress**
+- improve documentation **in progress**
 - partial model training (heads -> bifpn -> backbone)
 - develop faster training schedule which lowers the learning rate automatically based on a heuristic
 - EMA training
