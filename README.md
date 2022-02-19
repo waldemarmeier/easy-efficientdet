@@ -84,3 +84,4 @@ In the meantime, the tensorflow team implemented a similiar package in [tensorfl
 - auto augmentation parameters (need to come up with heuristic based on label distribution)
 - custom combined Soft-NMS tensorflow op (might be fun)
 - gradient checkpointing to increase batch or model size (might be fun)
+- more backbone types (e.g. EfficientNetV2 in tf 2.8.0)
