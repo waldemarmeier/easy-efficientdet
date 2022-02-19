@@ -49,15 +49,35 @@ class ImageShape:
         self._shape = shape
 
     @property
-    def shape(self, ):
-        # return a copy
+    def shape(self, ) -> Sequence[int]:
+        # read-only, return a copy
         return [*self._shape]
 
-    def is_bw(self, ):
+    def is_bw(self, ) -> bool:
         return self._shape[2] == 1
 
 
-def convert_to_centroids(boxes):
+class _ImageColor:
+
+    BW = "bw"
+    RGB = "rgb"
+    MIXED = "mixed"
+
+    def __init__(self, ):
+        self.types = self.valid_types()
+
+    def __contains__(self, other) -> bool:
+        return other in self.types
+
+    @classmethod
+    def valid_types(cls, ) -> Set[str]:
+        return {cls.BW, cls.RGB, cls.MIXED}
+
+
+ImageColor = _ImageColor()
+
+
+def convert_to_centroids(boxes) -> tf.Tensor:
     """Changes the box format to center, width and height.
 
     Arguments:
@@ -82,7 +102,7 @@ def tf_round(num, precision: int = 0) -> tf.Tensor:
     return tf.round(num * (10**precision)) / (10**precision)
 
 
-def convert_to_corners(boxes):
+def convert_to_corners(boxes) -> tf.Tensor:
     """Changes the box format from centroids to corner coordinates.
 
     Arguments:
@@ -121,7 +141,7 @@ def swap_xy(boxes: tf.Tensor) -> tf.Tensor:
     )
 
 
-def compute_iou(boxes1, boxes2):
+def compute_iou(boxes1, boxes2) -> tf.Tensor:
     """Computes pairwise IOU matrix for given two sets of boxes
 
     TODO add notice where this func was extracted from

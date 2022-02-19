@@ -9,7 +9,11 @@ from typing import Any, Callable, ClassVar, Dict, Optional, Sequence, Union
 import tensorflow as tf
 from tensorflow.keras.losses import Reduction
 
-from easy_efficientdet.utils import convert_image_to_rgb, setup_default_logger
+from easy_efficientdet.utils import (
+    ImageColor,
+    convert_image_to_rgb,
+    setup_default_logger,
+)
 
 # works better with linter
 ResizeMethod = tf.image.ResizeMethod
@@ -17,7 +21,8 @@ logger = setup_default_logger("Config")
 
 PREPROCESSING_FUNCS = {
     "tf.identity": tf.identity,
-    "convert_image_to_rgb": convert_image_to_rgb
+    "convert_image_to_rgb": convert_image_to_rgb,
+    "tf.image.grayscale_to_rgb": tf.image.grayscale_to_rgb,
 }
 
 
@@ -197,6 +202,41 @@ class ObjectDetectionConfig:
                         timestamp=datetime.now().strftime('%Y%m%d%H%M'))
 
 
+DEFAULT_CONFIG = {
+    "date": None,
+    "path_weights": None,
+    "intermediate_scales": 3,
+    "aspect_ratios": [0.5, 1.0, 2.0],
+    "stride_anchor_size_ratio": 4.0,
+    "min_level": 3,
+    "max_level": 7,
+    "box_scales": None,
+    "image_preprocessor": tf.identity,
+    "match_iou": .5,
+    "ignore_iou": .4,
+    "alpha": .25,
+    "gamma": 1.5,
+    "delta": .1,
+    "box_loss_weight": 50.0,
+    "reduction": "auto",
+    "scale_min": .1,
+    "scale_max": 2.0,
+    "size_threshold": .01,
+    "resize_method": ResizeMethod.BILINEAR,
+    "seed": None,
+    "tfrecord_suffix": "tfrecord",
+    "horizontal_flip_prob": .5,
+    "train_data_size": None,
+    "val_data_size": None,
+    "learning_rate": "auto",
+    "momentum": .9,
+    "weight_decay": 4e-5,
+    "warmup_epochs": 3,
+    "multi_gpu": False,
+    "bn_sync": False,
+}
+
+
 def DefaultConfig(num_cls: int,
                   batch_size: int,
                   train_data_path: str,
@@ -204,43 +244,12 @@ def DefaultConfig(num_cls: int,
                   epochs: int,
                   training_image_size: int = 512,
                   efficientdet_version: int = 0,
-                  bw_image_data: bool = False,
+                  image_data_color: ImageColor = ImageColor.RGB,
                   **kwargs) -> ObjectDetectionConfig:
-    # add here path to train
-    default_config = {
-        "date": datetime.now().strftime('%Y%m%d%H%M'),
-        "path_weights": None,
-        "intermediate_scales": 3,
-        "aspect_ratios": [0.5, 1.0, 2.0],
-        "stride_anchor_size_ratio": 4.0,
-        "min_level": 3,
-        "max_level": 7,
-        "box_scales": None,
-        "image_preprocessor": tf.identity,
-        "match_iou": .5,
-        "ignore_iou": .4,
-        "alpha": .25,
-        "gamma": 1.5,
-        "delta": .1,
-        "box_loss_weight": 50.0,
-        "reduction": "auto",
-        "scale_min": .1,
-        "scale_max": 2.0,
-        "size_threshold": .01,
-        "resize_method": ResizeMethod.BILINEAR,
-        "seed": None,
-        "tfrecord_suffix": "tfrecord",
-        "horizontal_flip_prob": .5,
-        "train_data_size": None,
-        "val_data_size": None,
-        "learning_rate": "auto",
-        "momentum": .9,
-        "weight_decay": 4e-5,
-        "warmup_epochs": 3,
-        "multi_gpu": False,
-        "bn_sync": False,
-    }
 
+    # copy default config value
+    default_config = {k: v for k, v in DEFAULT_CONFIG.items()}
+    default_config["date"] = datetime.now().strftime('%Y%m%d%H%M')
     # get valid keys used later for validation of user input
     valid_kwargs_keys = frozenset(default_config.keys())
 
@@ -262,15 +271,27 @@ def DefaultConfig(num_cls: int,
             logger.warning("Multi-GPU training without SyncBatchNormalization is not"
                            " recommended. 'bn_sync' should be set to 'True'")
 
-    if bw_image_data is True:
+    # handle image color stuff with modes: RGB, BW and mixed
+    if image_data_color not in ImageColor:
+        raise ValueError(f"image_data_color must be in {ImageColor.valid_types()}")
+
+    if image_data_color == ImageColor.BW:
         default_config["image_shape"] = (training_image_size, training_image_size, 1)
         # efficient backbone expects input image with shape (..., 3)
         default_config["image_preprocessor"] = tf.image.grayscale_to_rgb
         if "image_preprocessor" in kwargs:
             logger.warning("Custom image preprocessor must convert BW images to RGB "
                            "with shape (..., 3), e.g. tf.image.grayscale_to_rgb")
-    else:
+    elif image_data_color == ImageColor.RGB:
         default_config["image_shape"] = (training_image_size, training_image_size, 3)
+    else:
+        # image data size mixed
+        default_config["image_shape"] = (training_image_size, training_image_size, 3)
+        default_config["image_preprocessor"] = convert_image_to_rgb
+        if "image_preprocessor" in kwargs:
+            logger.warning("Mixed image color mode is set: custom image preprocessor"
+                           " must convert BW images to RGB and handle already "
+                           "RGB images")
 
     if len(kwargs) > 0:
         # check if all kwargs are valid

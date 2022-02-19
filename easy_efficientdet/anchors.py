@@ -1,7 +1,20 @@
+from dataclasses import dataclass
 from numbers import Number
 from typing import Dict, Sequence, Union
 
 import tensorflow as tf
+
+
+# TODO use this
+@dataclass
+class AnchorBoxesConfig:
+    # TODO Change this to image shape object
+    image_shape: Sequence[Number] = (512, 512)
+    intermediate_scales: Union[Sequence[Number], int] = 3
+    aspect_ratios: Sequence[Number] = [0.5, 1.0, 2.0]
+    stride_anchor_size_ratio: Number = 4.0
+    min_level: int = 3
+    max_level: int = 7
 
 
 def _get_featuremap_size(
