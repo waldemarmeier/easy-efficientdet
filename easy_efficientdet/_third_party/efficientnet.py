@@ -27,16 +27,31 @@ Reference:
 import copy
 import math
 
+import tensorflow as tf
+from packaging import version
+
+# support tf>=2.8.0
+if version.parse(tf.__version__) >= version.parse("2.8.0"):
+    from keras.applications import imagenet_utils
+    from keras.applications.efficientnet import (
+        BASE_WEIGHTS_PATH,
+        CONV_KERNEL_INITIALIZER,
+        DEFAULT_BLOCKS_ARGS,
+        DENSE_KERNEL_INITIALIZER,
+        WEIGHTS_HASHES,
+    )
+else:
+    from tensorflow.python.keras.applications import imagenet_utils
+    from tensorflow.python.keras.applications.efficientnet import (
+        BASE_WEIGHTS_PATH,
+        CONV_KERNEL_INITIALIZER,
+        DEFAULT_BLOCKS_ARGS,
+        DENSE_KERNEL_INITIALIZER,
+        WEIGHTS_HASHES,
+    )
+
 from tensorflow.keras.layers.experimental import SyncBatchNormalization
 from tensorflow.python.keras import backend
-from tensorflow.python.keras.applications import imagenet_utils
-from tensorflow.python.keras.applications.efficientnet import (
-    BASE_WEIGHTS_PATH,
-    CONV_KERNEL_INITIALIZER,
-    DEFAULT_BLOCKS_ARGS,
-    DENSE_KERNEL_INITIALIZER,
-    WEIGHTS_HASHES,
-)
 from tensorflow.python.keras.engine import training
 from tensorflow.python.keras.layers import VersionAwareLayers
 from tensorflow.python.keras.utils import data_utils, layer_utils
