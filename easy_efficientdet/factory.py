@@ -162,8 +162,15 @@ class EfficientDetFactory:
             learning_rate = self.config.learning_rate
         elif self.config.learning_rate == "auto":
             if self.config.train_data_size is None:
+                # TODO should throw an exception here, when data is not initalized
+                # this fails
                 logger.warning("If learning rate is set to 'auto' training data size "
                                "should be known")
+                raise ValueError("with learning rate_schedule 'auto' training data"
+                                 " size should be known. You can either set the "
+                                 "property 'train_data_size' in the configuration "
+                                 "or initialize the training data using this "
+                                 "factoary")
             learning_rate = CosineLrSchedule.get_effdet_lr_scheduler(
                 self.config.train_data_size, self.config.batch_size, self.config.epochs)
 
