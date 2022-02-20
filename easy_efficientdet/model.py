@@ -137,6 +137,8 @@ def effdet_functional(version: int, num_cls: int, num_anchors: int,
                                   name=f"efficientdet-d{version}")
 
     if path_weights is not None:
+        logger.info(f"loading model weights from '{path_weights}' with by_name=True and"
+                    " skip_mismatch=True")
         effdet_model.load_weights(path_weights, by_name=True, skip_mismatch=True)
 
     return effdet_model
