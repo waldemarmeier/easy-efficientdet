@@ -38,7 +38,7 @@ formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-DEFAULT_TFRECORD_NAME = "data{shardnum}.tfrecord"
+DEFAULT_TFRECORD_NAME = "data-{shardnum}.tfrecord"
 DEFAULT_LABELMAP_NAME = "labelmap.json"
 _SHARD_SIZE_MB = 100
 
