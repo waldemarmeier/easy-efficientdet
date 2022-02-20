@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Sequence
 
 import matplotlib.colors as mplc
 import matplotlib.pyplot as plt
+import numpy as np
 import tensorflow as tf
 from matplotlib.colors import cnames
 from matplotlib.patches import Rectangle
@@ -30,6 +31,26 @@ _default_cmap = [mplc.get_named_colors_mapping()[c.lower()] for c in _default_co
 
 _light_cmap = [mplc.to_rgba(c) for c in _default_cmap]
 _light_cmap = [x[:3] + (x[3] * PREDICTION_COLOR_ALPHA, ) for x in _light_cmap]
+
+
+def run_inference_for_plot(inf_model: tf.keras.Model,
+                           image: tf.Tensor) -> Sequence[np.ndarray]:
+
+    if len(image.shape) > 3:
+        # make image dims batched
+        image = image[tf.newaxis, ...]
+
+    pred_bboxes, pred_bboxes_probs, pred_bbox_cls_ids, num_detections = inf_model(
+        image[tf.newaxis, ...])
+
+    # prepare data for plotting function
+    num_detections = num_detections[0]
+    pred_bboxes = pred_bboxes[0, :num_detections, :].numpy()
+    pred_bboxes_probs = pred_bboxes_probs[0, :num_detections].numpy()
+    pred_bbox_cls_ids = pred_bbox_cls_ids[0, :num_detections].numpy().astype(
+        'int32') + 1
+
+    return pred_bboxes, pred_bboxes_probs, pred_bbox_cls_ids
 
 
 def _prepare_bboxes_for_plt(bboxes, bbox_format, image_shape):
@@ -105,6 +126,7 @@ def plot_image_bbox(image,
     """
     One plotting function to rule them all.
     """
+    # TODO add somewhere info that light shapes are gt
 
     if figsize is not None:
         plt.figure(figsize=figsize)
