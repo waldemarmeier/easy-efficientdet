@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Generator, Optional, Sequence, Set
 
 import tensorflow as tf
+from packaging import version
 
 from easy_efficientdet._third_party.postprocess import postprocess_tflite
 from easy_efficientdet.utils import setup_default_logger
@@ -43,8 +44,8 @@ class ExportModel(tf.Module):
         self.anchors = anchors  # normalized
 
     @tf.function
-    def __call__(self, imgs):
-        x = self.model(imgs, training=False)
+    def __call__(self, images):
+        x = self.model(images, training=False)
         cls_output = tf.math.sigmoid(x[..., 4:])
         box_output = x[..., :4]
         return postprocess_tflite(num_classes=self.num_cls,
@@ -90,6 +91,11 @@ def quantize(export_model: tf.Module,
             converter.optimizations = [tf.lite.Optimize.DEFAULT]
             converter.target_spec.supported_types = [tf.float16]
         elif opt_type == OptimzationType.INT8:
+
+            if version.parse(tf.__version__) >= version.parse("2.8.0"):
+                logger.warning("full int8 quantization will probably not work "
+                               "with tf 2.8.0+")
+
             converter.experimental_new_quantizer = True
             converter.representative_dataset = representative_dataset
             converter.optimizations = [tf.lite.Optimize.DEFAULT]
