@@ -40,17 +40,16 @@ def run_inference_for_plot(inf_model: tf.keras.Model,
         # make image dims batched
         image = image[tf.newaxis, ...]
 
-    pred_bboxes, pred_bboxes_probs, pred_bbox_cls_ids, num_detections = inf_model(
-        image[tf.newaxis, ...])
+    pred_bboxes, pred_probs, pred_cls_ids, num_detections = inf_model(image[tf.newaxis,
+                                                                            ...])
 
     # prepare data for plotting function
     num_detections = num_detections[0]
     pred_bboxes = pred_bboxes[0, :num_detections, :].numpy()
-    pred_bboxes_probs = pred_bboxes_probs[0, :num_detections].numpy()
-    pred_bbox_cls_ids = pred_bbox_cls_ids[0, :num_detections].numpy().astype(
-        'int32') + 1
+    pred_probs = pred_probs[0, :num_detections].numpy()
+    pred_cls_ids = pred_cls_ids[0, :num_detections].numpy().astype('int32') + 1
 
-    return pred_bboxes, pred_bboxes_probs, pred_bbox_cls_ids
+    return pred_bboxes, pred_probs, pred_cls_ids
 
 
 def _prepare_bboxes_for_plt(bboxes, bbox_format, image_shape):
