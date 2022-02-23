@@ -12,7 +12,7 @@ def load_readme() -> str:
 
 setup(
     name='easy-efficientdet',
-    version='0.1',
+    version='0.1.0',
     author="Waldemar Meier",
     author_email="info@waldemarmeier.com",
     url="https://github.com/waldemarmeier/easy-efficientdet",
