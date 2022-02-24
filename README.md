@@ -16,7 +16,7 @@ This project originated out of my master thesis which I wrote in coorporation wi
 - data augmentation
 - set up of training routine inlcuding optimizer and learning rate schedule
 - multi-gpu training
-- quantization api for production tf-lite models
+- quantization api for production tf-lite models **in development**
 
 ## Examples
 
@@ -69,6 +69,10 @@ In the meantime, the tensorflow team implemented a similiar package in [tensorfl
 - [tensorflow object detection api](https://github.com/tensorflow/models/tree/master/research/object_detection)
 - [keras RetinaNet example](https://keras.io/examples/vision/retinanet/)
 - [original EfficientDet implementation](https://github.com/google/automl/tree/master/efficientdet)
+
+## Known issues
+
+- dynamic range and integer quantization do not to work properly. I have not found the reasen, yet.
 
 ## Backlog
 
