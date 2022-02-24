@@ -20,8 +20,9 @@ This project originated out of my master thesis which I wrote in coorporation wi
 
 ## Examples
 
-- link to colab
-- code
+### Colab
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/waldemarmeier/easy-efficientdet/blob/master/examples/train_voc_tl.ipynb)
 
 ### Brief Introduction
 
